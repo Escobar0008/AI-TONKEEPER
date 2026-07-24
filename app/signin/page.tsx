@@ -1,15 +1,24 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { supabase } from "../lib/supabase";
+import { Eye, EyeOff } from "lucide-react";
 import { TonConnectButton } from "@tonconnect/ui-react";
-export default function SignIn() {
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+
+export default function SignInPage() {
   const router = useRouter();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   async function handleSignIn(e: React.FormEvent) {
     e.preventDefault();
@@ -28,59 +37,102 @@ export default function SignIn() {
       return;
     }
 
-    alert("Bienvenue !");
     router.push("/dashboard");
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-blue-950 via-blue-900 to-black flex items-center justify-center px-6">
-      <div className="w-full max-w-md bg-white/10 backdrop-blur-xl rounded-3xl border border-white/20 p-8 shadow-2xl">
+    <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0b1025] via-[#1d3ea3] to-[#050816] p-6">
 
-        <h1 className="text-4xl font-bold text-white text-center mb-2">
+      <div className="w-full max-w-md rounded-3xl border border-white/20 bg-white/10 backdrop-blur-xl shadow-2xl p-8">
+
+        <h1 className="text-4xl font-bold text-center text-white">
           Welcome Back
         </h1>
 
-        <p className="text-blue-200 text-center mb-8">
+        <p className="mt-3 text-center text-blue-100">
           Sign in to your AI TONKEEPER account
         </p>
 
-        <form onSubmit={handleSignIn} className="space-y-5">
+        <form
+          onSubmit={handleSignIn}
+          className="mt-8 space-y-5"
+        >
 
-          <input
-            type="email"
-            placeholder="Email Address"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full p-4 rounded-xl bg-white/10 border border-white/20 text-white placeholder:text-blue-200 outline-none"
-            required
-          />
+          {/* EMAIL */}
 
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full p-4 rounded-xl bg-white/10 border border-white/20 text-white placeholder:text-blue-200 outline-none"
-            required
-          />
+          <div>
 
+            <label className="mb-2 block text-sm text-blue-100">
+              Email Address
+            </label>
+
+            <input
+              type="email"
+              placeholder="Email Address"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="w-full rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-white placeholder:text-gray-300 outline-none focus:border-blue-400"
+            />
+
+          </div>
+
+          {/* PASSWORD */}
+
+          <div>
+
+            <label className="mb-2 block text-sm text-blue-100">
+              Password
+            </label>
+
+            <div className="relative">
+
+              <input
+                type={showPassword ? "text" : "password"}
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="w-full rounded-xl border border-white/20 bg-white/10 px-4 py-3 pr-12 text-white placeholder:text-gray-300 outline-none focus:border-blue-400"
+              />
+
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300 hover:text-white"
+              >
+                {showPassword ? (
+                  <EyeOff size={22} />
+                ) : (
+                  <Eye size={22} />
+                )}
+              </button>
+
+            </div>
+
+          </div>
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-4 rounded-xl bg-blue-600 hover:bg-blue-500 transition font-bold text-white"
+            className="w-full rounded-xl bg-blue-600 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
           >
             {loading ? "Signing In..." : "Sign In"}
           </button>
-<TonConnectButton className="w-full mt-4" />
         </form>
 
-        <p className="text-center text-blue-200 mt-8">
-          Don't have an account?{" "}
-          <a href="/signup" className="text-white font-semibold">
-            Sign Up
-          </a>
-        </p>
+        <div className="mt-6 flex justify-center">
+          <TonConnectButton />
+        </div>
 
+        <p className="mt-8 text-center text-blue-100">
+          Don't have an account?{" "}
+          <Link
+            href="/signup"
+            className="font-bold text-white hover:underline"
+          >
+            Sign Up
+          </Link>
+        </p>
       </div>
     </main>
   );
