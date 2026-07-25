@@ -1,0 +1,98 @@
+/* ===== AI TONKEEPER Responsive ===== */
+
+*{
+  box-sizing:border-box;
+}
+
+html{
+  font-size:16px;
+}
+
+img{
+  max-width:100%;
+  height:auto;
+}
+
+body{
+  overflow-x:hidden;
+}
+
+/* Tablettes */
+@media (max-width:1024px){
+
+h1{
+font-size:2.2rem !important;
+}
+
+h2{
+font-size:1.7rem !important;
+}
+
+}
+
+/* Téléphones */
+@media (max-width:768px){
+
+html{
+font-size:14px;
+}
+
+.min-h-screen{
+padding:16px !important;
+}
+
+h1{
+font-size:2rem !important;
+text-align:center;
+}
+
+h2{
+font-size:1.5rem !important;
+text-align:center;
+}
+
+input,
+textarea,
+button{
+font-size:16px !important;
+}
+
+button{
+width:100%;
+margin-top:10px;
+}
+
+.flex{
+flex-wrap:wrap;
+}
+
+.grid{
+grid-template-columns:1fr !important;
+}
+
+.rounded-xl{
+border-radius:18px;
+}
+
+}
+
+/* Petits téléphones */
+@media (max-width:480px){
+
+html{
+font-size:13px;
+}
+
+h1{
+font-size:1.7rem !important;
+}
+
+h2{
+font-size:1.3rem !important;
+}
+
+p{
+font-size:0.95rem;
+}
+
+}
