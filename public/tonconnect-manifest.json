@@ -1,5 +1,7 @@
 {
   "url": "https://ai-tonkeeper.vercel.app",
   "name": "AI TONKEEPER",
-  "iconUrl": "https://ai-tonkeeper.vercel.app/favicon.ico"
+  "iconUrl": "https://ai-tonkeeper.vercel.app/favicon.ico",
+  "termsOfUseUrl": "https://ai-tonkeeper.vercel.app/terms",
+  "privacyPolicyUrl": "https://ai-tonkeeper.vercel.app/privacy"
 }
