@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-export default function VerifyPage() {
+function VerifyContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -31,22 +31,17 @@ export default function VerifyPage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          email,
-          code,
-        }),
+        body: JSON.stringify({ email, code }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        setLoading(false);
         alert(data.error || "Code invalide.");
         return;
       }
 
       alert("✅ Email vérifié avec succès.");
-
       router.push("/signin");
     } catch (error) {
       console.error(error);
@@ -58,9 +53,7 @@ export default function VerifyPage() {
 
   return (
     <main className="min-h-screen bg-[#050B18] flex items-center justify-center px-6">
-
       <div className="w-full max-w-md bg-[#101A2C] rounded-3xl border border-slate-800 p-8 shadow-xl">
-
         <h1 className="text-3xl font-bold text-white text-center">
           Vérification
         </h1>
@@ -77,9 +70,7 @@ export default function VerifyPage() {
           type="text"
           maxLength={6}
           value={code}
-          onChange={(e) =>
-            setCode(e.target.value.replace(/\D/g, ""))
-          }
+          onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
           placeholder="000000"
           className="w-full mt-8 text-center text-3xl tracking-[10px] rounded-xl bg-[#050B18] border border-slate-700 p-4 text-white outline-none"
         />
@@ -91,9 +82,15 @@ export default function VerifyPage() {
         >
           {loading ? "Vérification..." : "Vérifier le code"}
         </button>
-
       </div>
-
     </main>
+  );
+}
+
+export default function VerifyPage() {
+  return (
+    <Suspense fallback={<div>Chargement...</div>}>
+      <VerifyContent />
+    </Suspense>
   );
 }
