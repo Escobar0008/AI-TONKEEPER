@@ -4,19 +4,13 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
-import { TonConnectButton } from "@tonconnect/ui-react";
-import { createClient } from "@supabase/supabase-js";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
 
 export default function SignInPage() {
   const router = useRouter();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -25,19 +19,42 @@ export default function SignInPage() {
 
     setLoading(true);
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const res = await fetch("/api/auth/signin", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          password,
+        }),
+      });
 
-    setLoading(false);
+      const data = await res.json();
 
-    if (error) {
-      alert(error.message);
-      return;
+      setLoading(false);
+
+      if (!res.ok) {
+        alert(data.error || "Login failed.");
+        return;
+      }
+// Sauvegarder l'utilisateur connecté
+localStorage.setItem("userId", data.user.id);
+      // Le cookie est créé automatiquement par l'API
+
+      if (!data.user.transactionPin) {
+        router.push("/create-pin");
+      } else {
+        router.push("/dashboard");
+      }
+
+    } catch (error) {
+      console.error(error);
+      setLoading(false);
+
+      alert("Server error.");
     }
-
-    router.push("/dashboard");
   }
 
   return (
@@ -58,8 +75,6 @@ export default function SignInPage() {
           className="mt-8 space-y-5"
         >
 
-          {/* EMAIL */}
-
           <div>
 
             <label className="mb-2 block text-sm text-blue-100">
@@ -76,8 +91,6 @@ export default function SignInPage() {
             />
 
           </div>
-
-          {/* PASSWORD */}
 
           <div>
 
@@ -111,6 +124,7 @@ export default function SignInPage() {
             </div>
 
           </div>
+
           <button
             type="submit"
             disabled={loading}
@@ -118,22 +132,24 @@ export default function SignInPage() {
           >
             {loading ? "Signing In..." : "Sign In"}
           </button>
+
         </form>
 
-        <div className="mt-6 flex justify-center">
-          <TonConnectButton />
-        </div>
-
         <p className="mt-8 text-center text-blue-100">
+
           Don't have an account?{" "}
+
           <Link
             href="/signup"
             className="font-bold text-white hover:underline"
           >
             Sign Up
           </Link>
+
         </p>
+
       </div>
+
     </main>
   );
 }

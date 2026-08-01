@@ -1,43 +1,122 @@
+"use client";
+
+import Link from "next/link";
+import { ArrowLeft, Coins, Bitcoin } from "lucide-react";
+
 export default function WithdrawPage() {
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 p-6 md:p-8">
+    <main className="min-h-screen bg-[#050B18] text-white">
 
-      <h1 className="text-3xl md:text-4xl font-bold text-white">
-        Withdraw TON
-      </h1>
+      <div className="max-w-md mx-auto px-5 py-6">
 
-      <p className="text-blue-200 mt-3">
-        Send your TON securely.
-      </p>
+        {/* ================= HEADER ================= */}
 
+        <div className="flex items-center gap-4 mb-8">
 
-      <div className="mt-8 rounded-2xl bg-slate-900 border border-slate-700 p-6">
+          <Link
+            href="/dashboard"
+            className="w-12 h-12 rounded-full bg-[#101A2C] border border-slate-800 flex items-center justify-center"
+          >
+            <ArrowLeft size={22} />
+          </Link>
 
+          <div>
+            <h1 className="text-3xl font-bold">
+              Withdraw
+            </h1>
 
-        <h2 className="text-2xl font-bold text-white">
-          Withdrawal Request
-        </h2>
+            <p className="text-slate-400">
+              Choose the cryptocurrency to withdraw
+            </p>
+          </div>
 
+        </div>
 
-        <input
-          placeholder="TON Address"
-          className="w-full mt-5 bg-slate-800 text-white p-4 rounded-xl"
-        />
+        {/* ================= TITLE ================= */}
 
+        <section className="bg-[#101A2C] border border-slate-800 rounded-[30px] p-6">
 
-        <input
-          placeholder="Amount TON"
-          className="w-full mt-4 bg-slate-800 text-white p-4 rounded-xl"
-        />
+          <h2 className="text-2xl font-bold">
+            Select Asset
+          </h2>
 
+          <p className="text-slate-400 mt-2">
+            Select the cryptocurrency you want to withdraw.
+          </p>
 
-        <button className="mt-6 bg-red-500 hover:bg-red-600 text-white font-bold px-6 py-3 rounded-xl">
-          Withdraw
-        </button>
+          {/* TON */}
 
+          <Link
+            href="/withdraw/ton"
+            className="mt-8 flex items-center justify-between bg-[#17233B] rounded-3xl p-6 border border-slate-700 hover:border-cyan-400 transition"
+          >
+            <div className="flex items-center gap-4">
+
+              <div className="w-14 h-14 rounded-full bg-cyan-500/20 flex items-center justify-center">
+                <Coins
+                  size={30}
+                  className="text-cyan-400"
+                />
+              </div>
+
+              <div>
+
+                <h3 className="text-xl font-bold">
+                  Withdraw TON
+                </h3>
+
+                <p className="text-slate-400">
+                  Send TON securely
+                </p>
+
+              </div>
+
+            </div>
+
+            <span className="text-cyan-400 text-2xl">
+              →
+            </span>
+
+          </Link>
+
+          {/* BTC */}
+
+          <Link
+            href="/withdraw/btc"
+            className="mt-6 flex items-center justify-between bg-[#17233B] rounded-3xl p-6 border border-slate-700 hover:border-yellow-400 transition"
+          >
+            <div className="flex items-center gap-4">
+
+              <div className="w-14 h-14 rounded-full bg-yellow-500/20 flex items-center justify-center">
+                <Bitcoin
+                  size={30}
+                  className="text-yellow-400"
+                />
+              </div>
+
+              <div>
+
+                <h3 className="text-xl font-bold">
+                  Withdraw BTC
+                </h3>
+
+                <p className="text-slate-400">
+                  Send Bitcoin securely
+                </p>
+
+              </div>
+
+            </div>
+
+            <span className="text-yellow-400 text-2xl">
+              →
+            </span>
+
+          </Link>
+
+        </section>
 
       </div>
-
 
     </main>
   );

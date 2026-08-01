@@ -1,0 +1,141 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  password      String
+ 
+ emailVerified Boolean @default(false)
+transactionPin String?
+
+  name          String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  wallet        Wallet?
+  transactions  Transaction[]
+  deposits      Deposit[]
+  withdrawals   Withdrawal[]
+  aiTrades      AITrade[]
+  kyc           KYC?
+  orders        Order[]
+  referrals     Referral[]     @relation("UserReferrals")
+}
+
+model Wallet {
+  id         String   @id @default(cuid())
+  address    String   @unique
+  network    String   @default("TON")
+  balance    Float    @default(0)
+
+  userId     String   @unique
+  user       User     @relation(fields: [userId], references: [id])
+
+  createdAt  DateTime @default(now())
+}
+
+model Transaction {
+  id            String   @id @default(cuid())
+  type          String
+  amount        Float
+  status        String
+  walletAddress String?
+  createdAt     DateTime @default(now())
+
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+}
+
+model Deposit {
+  id          String   @id @default(cuid())
+  txHash      String?  @unique
+  fromAddress String
+  toAddress   String
+  amount      Float
+  status      String   @default("Pending")
+
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Withdrawal {
+  id                   String   @id @default(cuid())
+  destinationAddress   String
+  amount               Float
+  status               String   @default("Pending")
+
+  userId               String
+  user                 User     @relation(fields: [userId], references: [id])
+
+  createdAt            DateTime @default(now())
+}
+
+model AITrade {
+  id          String   @id @default(cuid())
+  strategy    String
+  asset       String   @default("TON")
+  amount      Float
+  profit      Float    @default(0)
+  status      String
+
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+
+  createdAt   DateTime @default(now())
+}
+
+model KYC {
+  id           String   @id @default(cuid())
+  status       String   @default("Pending")
+  documentUrl  String?
+
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id])
+
+  createdAt    DateTime @default(now())
+}
+
+model Referral {
+  id         String   @id @default(cuid())
+  code       String   @unique
+  reward     Float    @default(0)
+
+  userId     String
+  user       User     @relation("UserReferrals", fields: [userId], references: [id])
+
+  createdAt  DateTime @default(now())
+}
+
+model Order {
+  id            String   @id @default(cuid())
+  orderId       String   @unique
+  amountUsd     Float
+  estimatedTon  Float
+  status        String   @default("Pending")
+
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+model VerificationCode {
+  id         String   @id @default(cuid())
+  email      String
+  code       String
+  purpose    String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+
+  @@index([email])
+}

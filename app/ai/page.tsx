@@ -1,186 +1,453 @@
 "use client";
-import "../styles/responsive.css";
-import { useState } from "react";
 
-type ChatMessage = {
-  sender: "user" | "ai";
-  text: string;
-};
+import { useState } from "react";
+import Link from "next/link";
+import {
+  ArrowLeft,
+  Bot,
+  Wallet,
+  DollarSign,
+  Trophy,
+  TrendingUp,
+  TrendingDown,
+  Activity,
+  Play,
+  Square,
+  RefreshCw,
+} from "lucide-react";
 
 export default function AIPage() {
-  const [message, setMessage] = useState("");
+  const [status, setStatus] = useState("Idle");
+  const [coin, setCoin] = useState("TON");
+  const [capital, setCapital] = useState(1000);
+  const [profit, setProfit] = useState(0);
+  const [winRate, setWinRate] = useState(0);
+  const [wins, setWins] = useState(0);
+  const [losses, setLosses] = useState(0);
 
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      sender: "ai",
-      text: "🤖 AI TONKEEPER Online.",
-    },
-  ]);
+  return (
+    <main className="min-h-screen bg-[#050B18] text-white">
 
-  const sendMessage = async () => {
-    if (!message.trim()) return;
+      <div className="max-w-md mx-auto p-5">
 
-    const userMessage = message;
+        {/* HEADER */}
 
-    setMessages((prev) => [
-      ...prev,
-      {
-        sender: "user",
-        text: userMessage,
-      },
-    ]);
+        <div className="flex items-center gap-4 mb-8">
 
-    setMessage("");
-
-    let coin = userMessage.toLowerCase().trim();
-
-    if (coin === "btc") coin = "bitcoin";
-    if (coin === "eth") coin = "ethereum";
-    if (coin === "ton") coin = "the-open-network";
-    if (coin === "gram") coin = "the-open-network";
-    if (coin === "sol") coin = "solana";
-
-    try {
-      const res = await fetch(`/api/crypto?coin=${coin}`);
-      const data = await res.json();
-      if (data.error) {
-        setMessages((prev) => [
-          ...prev,
-          {
-            sender: "ai",
-            text: "❌ Crypto introuvable.",
-          },
-        ]);
-
-        return;
-      }
-
-      const trend =
-        data.change24h >= 0 ? "📈 Bullish" : "📉 Bearish";
-
-      const recommendation =
-        data.change24h >= 5
-          ? "🔥 STRONG BUY"
-          : data.change24h >= 0
-          ? "✅ BUY"
-          : "⚠️ SELL";
-
-      setMessages((prev) => [
-        ...prev,
-        {
-          sender: "ai",
-          text:
-            `🪙 ${data.name} (${data.symbol})\n\n` +
-            `💲 Prix : $${Number(data.price).toLocaleString()}\n` +
-            `📊 Variation 24h : ${Number(data.change24h).toFixed(2)}%\n` +
-            `🏦 Market Cap : $${Number(data.marketCap).toLocaleString()}\n\n` +
-            `📈 Tendance : ${trend}\n` +
-            `🎯 Recommandation : ${recommendation}`,
-        },
-      ]);
-      } catch (error) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          sender: "ai",
-          text: "❌ Impossible de récupérer les données.",
-        },
-      ]);
-    }
-    };
-    return (
-    <div className="min-h-screen bg-slate-950 text-white p-8">
-      <h1 className="text-4xl font-bold text-cyan-400">
-        AI TONKEEPER
-      </h1>
-
-      <p className="mt-2 text-slate-400">
-        Welcome to the AI Crypto Assistant.
-      </p>
-
-      <div className="mt-8 rounded-xl bg-slate-900 p-6 shadow-lg">
-        <h2 className="text-2xl font-bold mb-6">
-          AI Chat
-        </h2>
-
-        <div className="space-y-4">
-            {messages.map((msg, index) => (
-          <div
-            key={index}
-            className={`rounded-lg p-4 ${
-              msg.sender === "ai"
-                ? "bg-slate-800 text-white"
-                : "bg-cyan-600 text-white text-right"
-            }`}
+          <Link
+            href="/dashboard"
+            className="w-11 h-11 rounded-full bg-[#101A2C] flex items-center justify-center"
           >
-            {msg.text}
-          </div>
-        ))}
+            <ArrowLeft size={22} />
+          </Link>
 
-        <div className="flex gap-3">
+          <div>
+
+            <h1 className="text-3xl font-bold">
+              AI Trading
+            </h1>
+
+            <p className="text-slate-400">
+              Smart Crypto Assistant
+            </p>
+
+          </div>
+
+        </div>
+
+        {/* AI STATUS */}
+
+        <div className="bg-[#101A2C] rounded-3xl border border-slate-800 p-6">
+
+          <div className="flex items-center justify-between">
+
+            <div>
+
+              <h2 className="text-2xl font-bold">
+                AI Status
+              </h2>
+
+              <p className="text-green-400 mt-2">
+                ● Online
+              </p>
+
+            </div>
+
+            <Bot
+              size={50}
+              className="text-cyan-400"
+            />
+
+          </div>
+
+        </div>
+
+        {/* STATISTICS */}
+
+        <div className="grid grid-cols-2 gap-4 mt-6">
+
+          <div className="bg-[#101A2C] rounded-2xl p-5">
+
+            <div className="flex items-center gap-2">
+
+              <Wallet
+                className="text-cyan-400"
+                size={20}
+              />
+
+              <span className="text-slate-400">
+                Capital
+              </span>
+
+            </div>
+
+            <h2 className="text-3xl font-bold mt-3">
+              ${capital}
+            </h2>
+
+          </div>
+
+          <div className="bg-[#101A2C] rounded-2xl p-5">
+
+            <div className="flex items-center gap-2">
+
+              <DollarSign
+                className="text-green-400"
+                size={20}
+              />
+
+              <span className="text-slate-400">
+                Profit
+              </span>
+
+            </div>
+
+            <h2 className="text-3xl font-bold mt-3 text-green-400">
+              +${profit}
+            </h2>
+
+          </div>
+
+          <div className="bg-[#101A2C] rounded-2xl p-5">
+
+            <div className="flex items-center gap-2">
+
+              <Trophy
+                className="text-yellow-400"
+                size={20}
+              />
+
+              <span className="text-slate-400">
+                Win Rate
+              </span>
+
+            </div>
+
+            <h2 className="text-3xl font-bold mt-3">
+              {winRate}%
+            </h2>
+
+          </div>
+
+          <div className="bg-[#101A2C] rounded-2xl p-5">
+
+            <div className="flex items-center gap-2">
+
+              <Activity
+                className="text-cyan-400"
+                size={20}
+              />
+
+              <span className="text-slate-400">
+                Status
+              </span>
+
+            </div>
+
+            <h2 className="text-2xl font-bold mt-3 text-cyan-400">
+              {status}
+            </h2>
+
+          </div>
+
+        </div>
+        {/* ================= AI SETTINGS ================= */}
+
+        <div className="mt-6 bg-[#101A2C] rounded-3xl border border-slate-800 p-6">
+
+          <h2 className="text-2xl font-bold mb-5">
+            AI Configuration
+          </h2>
+
+          {/* Coin */}
+
+          <label className="text-slate-400">
+            Cryptocurrency
+          </label>
+
+          <select
+            value={coin}
+            onChange={(e) => setCoin(e.target.value)}
+            className="mt-2 w-full rounded-2xl bg-[#17233B] p-4 border border-slate-700 outline-none"
+          >
+            <option value="TON">TON</option>
+            <option value="BTC">Bitcoin (BTC)</option>
+            <option value="ETH">Ethereum (ETH)</option>
+            <option value="USDT">USDT</option>
+          </select>
+
+          {/* Investment */}
+
+          <label className="text-slate-400 mt-6 block">
+            Investment Amount
+          </label>
+
           <input
-            type="text"
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") sendMessage();
-            }}
-            placeholder="Ask AI about crypto..."
-            className="flex-1 rounded-lg bg-slate-800 p-4 text-white outline-none"
+            type="number"
+            defaultValue={capital}
+            className="mt-2 w-full rounded-2xl bg-[#17233B] p-4 border border-slate-700 outline-none"
           />
 
-          <button
-            onClick={sendMessage}
-            className="rounded-lg bg-cyan-500 px-6 font-bold text-black hover:bg-cyan-400"
+          {/* Risk */}
+
+          <label className="text-slate-400 mt-6 block">
+            Risk Level
+          </label>
+
+          <select
+            className="mt-2 w-full rounded-2xl bg-[#17233B] p-4 border border-slate-700 outline-none"
           >
-            Send
+            <option>Low</option>
+            <option selected>Medium</option>
+            <option>High</option>
+          </select>
+
+          {/* Strategy */}
+
+          <label className="text-slate-400 mt-6 block">
+            AI Strategy
+          </label>
+
+          <select
+            className="mt-2 w-full rounded-2xl bg-[#17233B] p-4 border border-slate-700 outline-none"
+          >
+            <option>Scalping</option>
+            <option>Swing Trading</option>
+            <option>Trend Following</option>
+            <option>DCA</option>
+          </select>
+
+          {/* Stop Loss */}
+
+          <label className="text-slate-400 mt-6 block">
+            Stop Loss (%)
+          </label>
+
+          <input
+            type="number"
+            defaultValue={5}
+            className="mt-2 w-full rounded-2xl bg-[#17233B] p-4 border border-slate-700 outline-none"
+          />
+
+          {/* Take Profit */}
+
+          <label className="text-slate-400 mt-6 block">
+            Take Profit (%)
+          </label>
+
+          <input
+            type="number"
+            defaultValue={15}
+            className="mt-2 w-full rounded-2xl bg-[#17233B] p-4 border border-slate-700 outline-none"
+          />
+
+        </div>
+
+        {/* ================= AI ANALYSIS ================= */}
+
+        <div className="mt-6 bg-[#101A2C] rounded-3xl border border-slate-800 p-6">
+
+          <div className="flex items-center gap-3 mb-4">
+
+            <Bot
+              className="text-cyan-400"
+              size={24}
+            />
+
+            <h2 className="text-2xl font-bold">
+              AI Analysis
+            </h2>
+
+          </div>
+
+          <div className="space-y-4">
+
+            <div className="flex justify-between">
+
+              <span className="text-slate-400">
+                Market Trend
+              </span>
+
+              <span className="text-green-400 font-bold">
+                Bullish
+              </span>
+
+            </div>
+
+            <div className="flex justify-between">
+
+              <span className="text-slate-400">
+                AI Signal
+              </span>
+
+              <span className="text-cyan-400 font-bold">
+                HOLD
+              </span>
+
+            </div>
+
+            <div className="flex justify-between">
+
+              <span className="text-slate-400">
+                Confidence
+              </span>
+
+              <span className="text-yellow-400 font-bold">
+                91%
+              </span>
+
+            </div>
+
+            <div className="flex justify-between">
+
+              <span className="text-slate-400">
+                Selected Coin
+              </span>
+
+              <span className="text-white font-bold">
+                {coin}
+              </span>
+
+            </div>
+
+          </div>
+
+        </div>
+        {/* ================= ACTIONS ================= */}
+
+        <div className="mt-6 grid grid-cols-2 gap-4">
+
+          <button
+            onClick={() => setStatus("Running")}
+            className="bg-cyan-500 text-black font-bold rounded-2xl py-4 flex items-center justify-center gap-2 hover:bg-cyan-400 transition"
+          >
+            <Play size={20} />
+            Start
           </button>
-        </div>
+
+          <button
+            onClick={() => setStatus("Stopped")}
+            className="bg-red-500 font-bold rounded-2xl py-4 flex items-center justify-center gap-2 hover:bg-red-400 transition"
+          >
+            <Square size={20} />
+            Stop
+          </button>
+
         </div>
 
-      <div className="mt-6 flex justify-end">
         <button
-          onClick={() => {
-            setMessages([
-              {
-                sender: "ai",
-                text: "🤖 AI TONKEEPER Online.",
-              },
-            ]);
-          }}
-          className="rounded-lg bg-red-500 px-5 py-2 font-bold text-white hover:bg-red-600"
+          className="mt-4 w-full bg-[#17233B] rounded-2xl py-4 border border-slate-700 flex items-center justify-center gap-2 hover:bg-[#1E2D4A] transition"
         >
-          Clear Chat
+          <RefreshCw size={20} />
+          Refresh Analysis
         </button>
-      </div>
-      <div className="mt-8 rounded-xl bg-slate-900 p-6">
-        <h3 className="mb-4 text-xl font-bold text-cyan-400">
-          AI Features
-        </h3>
 
-        <ul className="space-y-2 text-slate-300">
-          <li>✅ Live Crypto Prices</li>
-          <li>✅ AI Market Analysis</li>
-          <li>✅ Buy / Sell Recommendation</li>
-          <li>✅ TON Ecosystem Support</li>
-          <li>✅ Fast API Response</li>
-        </ul>
-      </div>
-      <div className="mt-8 rounded-xl bg-slate-900 p-6">
-        <h3 className="mb-4 text-xl font-bold text-cyan-400">
-          Supported Coins
-        </h3>
+        {/* ================= PERFORMANCE ================= */}
 
-        <div className="grid grid-cols-2 gap-3 text-slate-300">
-          <div>🟠 Bitcoin (BTC)</div>
-          <div>🔵 Ethereum (ETH)</div>
-          <div>💎 TON (TON)</div>
-          <div>🟣 Solana (SOL)</div>
-          <div>🟡 BNB</div>
-          <div>⚫ XRP</div>
+        <div className="mt-6 bg-[#101A2C] rounded-3xl border border-slate-800 p-6">
+
+          <div className="flex items-center gap-3 mb-5">
+
+            <TrendingUp
+              className="text-green-400"
+              size={24}
+            />
+
+            <h2 className="text-2xl font-bold">
+              Performance
+            </h2>
+
+          </div>
+
+          <div className="h-44 rounded-2xl bg-[#17233B] border border-slate-700 flex items-center justify-center">
+
+            <div className="text-center">
+
+              <TrendingUp
+                size={40}
+                className="mx-auto text-cyan-400"
+              />
+
+              <p className="mt-3 text-slate-400">
+                Performance chart
+              </p>
+
+              <p className="text-sm text-slate-500">
+                (Live chart coming soon)
+              </p>
+
+            </div>
+
+          </div>
+
         </div>
+
+        {/* ================= HISTORY ================= */}
+
+        <div className="mt-6 bg-[#101A2C] rounded-3xl border border-slate-800 p-6">
+
+          <div className="flex items-center gap-3 mb-5">
+
+            <Activity
+              className="text-cyan-400"
+              size={24}
+            />
+
+            <h2 className="text-2xl font-bold">
+              Trading History
+            </h2>
+
+          </div>
+
+          <div className="space-y-4">
+
+            <div className="bg-[#17233B] rounded-2xl p-4 flex justify-between items-center">
+
+              <div>
+
+                <p className="font-bold">
+                  BUY {coin}
+                </p>
+
+                <p className="text-sm text-slate-400">
+                  Waiting for first trade...
+                </p>
+
+              </div>
+
+              <span className="text-yellow-400 font-bold">
+                Pending
+              </span>
+
+            </div>
+
+          </div>
+
+        </div>
+
       </div>
-      </div>
-    </div>
+
+    </main>
+
   );
 }

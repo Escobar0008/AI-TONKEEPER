@@ -1,12 +1,37 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { TonConnectButton, useTonWallet } from "@tonconnect/ui-react";
 import Sidebar from "../components/Sidebar";
 
 export default function WalletPage() {
   const wallet = useTonWallet();
 const [openMenu, setOpenMenu] = useState(false);
-  return (
+ useEffect(() => {
+  if (!wallet) return;
+
+  const saveWallet = async () => {
+    try {
+      const res = await fetch("/api/wallet/connect", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          address: wallet.account.address,
+          network: wallet.account.chain,
+        }),
+      });
+
+      const data = await res.json();
+      console.log("Wallet saved:", data);
+    } catch (error) {
+      console.error("Wallet save failed:", error);
+    }
+  };
+
+  saveWallet();
+}, [wallet]);
+return (
     <div className="flex min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900">
 
       <Sidebar />
