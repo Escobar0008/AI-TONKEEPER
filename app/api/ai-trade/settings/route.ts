@@ -37,34 +37,47 @@ function isValidPercentage(
   );
 }
 
+async function getAuthenticatedUserId() {
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    return null;
+  }
+
+  return String(session.user.id);
+}
+
 /*
 |--------------------------------------------------------------------------
 | GET /api/ai-trade/settings
 |--------------------------------------------------------------------------
 |
-| Returns the AI Trading settings of the authenticated user.
+| AI Trading settings are kept for the interface and configuration.
 |
+| IMPORTANT:
+|
+| These settings do NOT authorize real Bybit trading.
+|
+| The AI Trading system is currently simulation/display only.
+|
+|--------------------------------------------------------------------------
 */
 
 export async function GET() {
   try {
-    const session = await auth();
+    const userId =
+      await getAuthenticatedUserId();
 
-    if (!session?.user?.id) {
+    if (!userId) {
       return NextResponse.json(
         {
           success: false,
-          message: "Authentication required.",
+          message:
+            "Authentication required.",
         },
-        {
-          status: 401,
-        }
+        { status: 401 }
       );
     }
-
-    const userId = String(
-      session.user.id
-    );
 
     const settings =
       await prisma.aITradeSettings.findUnique({
@@ -78,15 +91,23 @@ export async function GET() {
         await prisma.aITradeSettings.create({
           data: {
             userId,
+
             strategy:
               AITradeStrategy.BALANCED,
+
             riskLevel:
               AIRiskLevel.MEDIUM,
+
             minimumConfidence: 70,
+
             maximumTradeAllocation: 10,
+
             stopLossProtection: true,
+
             dailyLossProtection: true,
+
             emergencyStop: true,
+
             enabled: false,
           },
         });
@@ -99,7 +120,21 @@ export async function GET() {
 
     return NextResponse.json({
       success: true,
-      settings,
+      settings: {
+        ...settings,
+
+        /*
+        |------------------------------------------------------------------
+        | Simulation mode
+        |------------------------------------------------------------------
+        |
+        | The interface can still display its ACTIVE/PAUSED/STOPPED
+        | states, but the backend never uses this setting to authorize
+        | real exchange orders.
+        |
+        */
+        enabled: settings.enabled,
+      },
     });
   } catch (error) {
     console.error(
@@ -113,9 +148,7 @@ export async function GET() {
         message:
           "Unable to load AI Trade settings.",
       },
-      {
-        status: 500,
-      }
+      { status: 500 }
     );
   }
 }
@@ -125,34 +158,56 @@ export async function GET() {
 | POST /api/ai-trade/settings
 |--------------------------------------------------------------------------
 |
-| Updates the authenticated user's AI Trading settings.
+| Saves AI Trading interface settings.
 |
+| IMPORTANT:
+|
+| `enabled` is accepted for UI state compatibility only.
+|
+| It does NOT activate real trading.
+|
+|--------------------------------------------------------------------------
 */
 
 export async function POST(
   request: NextRequest
 ) {
   try {
-    const session = await auth();
+    const userId =
+      await getAuthenticatedUserId();
 
-    if (!session?.user?.id) {
+    if (!userId) {
       return NextResponse.json(
         {
           success: false,
-          message: "Authentication required.",
+          message:
+            "Authentication required.",
         },
-        {
-          status: 401,
-        }
+        { status: 401 }
       );
     }
 
-    const userId = String(
-      session.user.id
-    );
+    let body: Record<
+      string,
+      unknown
+    >;
 
-    const body =
-      await request.json();
+    try {
+      body =
+        (await request.json()) as Record<
+          string,
+          unknown
+        >;
+    } catch {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Invalid request body.",
+        },
+        { status: 400 }
+      );
+    }
 
     if (
       !body ||
@@ -164,9 +219,7 @@ export async function POST(
           message:
             "Invalid request body.",
         },
-        {
-          status: 400,
-        }
+        { status: 400 }
       );
     }
 
@@ -201,9 +254,7 @@ export async function POST(
             message:
               "Invalid strategy. Use CONSERVATIVE, BALANCED or AGGRESSIVE.",
           },
-          {
-            status: 400,
-          }
+          { status: 400 }
         );
       }
 
@@ -231,9 +282,7 @@ export async function POST(
             message:
               "Invalid risk level. Use LOW, MEDIUM or HIGH.",
           },
-          {
-            status: 400,
-          }
+          { status: 400 }
         );
       }
 
@@ -267,9 +316,7 @@ export async function POST(
             message:
               "Minimum AI confidence must be between 0 and 100.",
           },
-          {
-            status: 400,
-          }
+          { status: 400 }
         );
       }
 
@@ -303,9 +350,7 @@ export async function POST(
             message:
               "Maximum trade allocation must be between 0 and 100.",
           },
-          {
-            status: 400,
-          }
+          { status: 400 }
         );
       }
 
@@ -333,9 +378,7 @@ export async function POST(
             message:
               "stopLossProtection must be true or false.",
           },
-          {
-            status: 400,
-          }
+          { status: 400 }
         );
       }
 
@@ -363,9 +406,7 @@ export async function POST(
             message:
               "dailyLossProtection must be true or false.",
           },
-          {
-            status: 400,
-          }
+          { status: 400 }
         );
       }
 
@@ -393,9 +434,7 @@ export async function POST(
             message:
               "emergencyStop must be true or false.",
           },
-          {
-            status: 400,
-          }
+          { status: 400 }
         );
       }
 
@@ -407,6 +446,11 @@ export async function POST(
     |--------------------------------------------------------------------------
     | Enabled
     |--------------------------------------------------------------------------
+    |
+    | Kept for compatibility with the existing UI.
+    |
+    | It DOES NOT enable real trading.
+    |
     */
 
     if (
@@ -422,9 +466,7 @@ export async function POST(
             message:
               "enabled must be true or false.",
           },
-          {
-            status: 400,
-          }
+          { status: 400 }
         );
       }
 
@@ -448,69 +490,67 @@ export async function POST(
           message:
             "No valid settings were provided.",
         },
-        {
-          status: 400,
-        }
+        { status: 400 }
       );
     }
 
     /*
     |--------------------------------------------------------------------------
-    | Create or Update
+    | CREATE / UPDATE
     |--------------------------------------------------------------------------
     */
 
     const settings =
-      await prisma.aITradeSettings.upsert(
-        {
-          where: {
-            userId,
-          },
+      await prisma.aITradeSettings.upsert({
+        where: {
+          userId,
+        },
 
-          create: {
-            userId,
+        create: {
+          userId,
 
-            strategy:
-              data.strategy ??
-              AITradeStrategy.BALANCED,
+          strategy:
+            data.strategy ??
+            AITradeStrategy.BALANCED,
 
-            riskLevel:
-              data.riskLevel ??
-              AIRiskLevel.MEDIUM,
+          riskLevel:
+            data.riskLevel ??
+            AIRiskLevel.MEDIUM,
 
-            minimumConfidence:
-              data.minimumConfidence ??
-              70,
+          minimumConfidence:
+            data.minimumConfidence ??
+            70,
 
-            maximumTradeAllocation:
-              data.maximumTradeAllocation ??
-              10,
+          maximumTradeAllocation:
+            data.maximumTradeAllocation ??
+            10,
 
-            stopLossProtection:
-              data.stopLossProtection ??
-              true,
+          stopLossProtection:
+            data.stopLossProtection ??
+            true,
 
-            dailyLossProtection:
-              data.dailyLossProtection ??
-              true,
+          dailyLossProtection:
+            data.dailyLossProtection ??
+            true,
 
-            emergencyStop:
-              data.emergencyStop ??
-              true,
+          emergencyStop:
+            data.emergencyStop ??
+            true,
 
-            enabled:
-              data.enabled ??
-              false,
-          },
+          enabled:
+            data.enabled ??
+            false,
+        },
 
-          update: data,
-        }
-      );
+        update: data,
+      });
 
     return NextResponse.json({
       success: true,
+
       message:
         "AI Trade settings saved.",
+
       settings,
     });
   } catch (error) {
@@ -525,9 +565,7 @@ export async function POST(
         message:
           "Unable to save AI Trade settings.",
       },
-      {
-        status: 500,
-      }
+      { status: 500 }
     );
   }
 }

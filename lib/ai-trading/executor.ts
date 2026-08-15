@@ -3,6 +3,7 @@ import type {
   AITradeSide,
   Coin,
 } from "@prisma/client";
+
 type ExecuteTradeInput = {
   userId: string;
   coin: Coin;
@@ -11,6 +12,7 @@ type ExecuteTradeInput = {
   price: number;
   confidence: number;
 };
+
 export type ExecuteTradeResult = {
   success: boolean;
   simulated: boolean;
@@ -19,45 +21,61 @@ export type ExecuteTradeResult = {
   orderId?: string | null;
   orderLinkId?: string | null;
 };
-function failed(
-  message: string
-): ExecuteTradeResult {
-  return {
-    success: false,
-    simulated: false,
-    message,
-  };
-}
-/*
-|--------------------------------------------------------------------------
-| SUPPORTED AI COINS
-|--------------------------------------------------------------------------
-*/
+
 const SUPPORTED_COINS: Coin[] = [
   "BTC",
   "ETH",
   "BNB",
 ];
+
+function failed(
+  message: string,
+  simulated = false
+): ExecuteTradeResult {
+  return {
+    success: false,
+    simulated,
+    message,
+  };
+}
+
+function isValidPositiveNumber(
+  value: unknown
+): value is number {
+  return (
+    typeof value === "number" &&
+    Number.isFinite(value) &&
+    value > 0
+  );
+}
+
 /*
 |--------------------------------------------------------------------------
 | EXECUTE AI TRADE
 |--------------------------------------------------------------------------
 |
-| IMPORTANT
+| Cette couche est volontairement sécurisée.
 |
-| BUY:
-|   amount = montant comptable en USDT.
+| Elle :
 |
-| SELL:
-|   amount = quantité comptable de la crypto.
+| 1. vérifie l'utilisateur
+| 2. vérifie AI Trading
+| 3. vérifie les protections
+| 4. vérifie le solde interne
+| 5. vérifie l'allocation maximale
+| 6. empêche les doublons
+| 7. crée le AITrade
+| 8. marque la décision comme exécutée
 |
-| Ce fichier valide et enregistre la décision de trade.
+| IMPORTANT :
 |
-| L'envoi automatique d'un ordre financier réel n'est pas effectué
-| directement ici.
+| L'envoi d'un ordre Bybit réel doit être branché sur les fonctions
+| Bybit existantes du projet. On ne simule PAS un ordre réel en
+| retournant "simulated: false".
 |
 |--------------------------------------------------------------------------
 */
+
 export async function executeAITrade(
   input: ExecuteTradeInput
 ): Promise<ExecuteTradeResult> {
@@ -70,16 +88,19 @@ export async function executeAITrade(
       price,
       confidence,
     } = input;
+
     /*
     |--------------------------------------------------------------------------
     | BASIC VALIDATION
     |--------------------------------------------------------------------------
     */
+
     if (!userId) {
       return failed(
         "User ID is required."
       );
     }
+
     if (
       !SUPPORTED_COINS.includes(
         coin
@@ -89,22 +110,36 @@ export async function executeAITrade(
         `${coin} is not supported by AI Trading.`
       );
     }
+
     if (
-      !Number.isFinite(amount) ||
-      amount <= 0
+      side !== "BUY" &&
+      side !== "SELL"
+    ) {
+      return failed(
+        "Invalid AI trade side."
+      );
+    }
+
+    if (
+      !isValidPositiveNumber(
+        amount
+      )
     ) {
       return failed(
         "Invalid trade amount."
       );
     }
+
     if (
-      !Number.isFinite(price) ||
-      price <= 0
+      !isValidPositiveNumber(
+        price
+      )
     ) {
       return failed(
         "Invalid market price."
       );
     }
+
     if (
       !Number.isFinite(
         confidence
@@ -116,11 +151,13 @@ export async function executeAITrade(
         "Invalid confidence."
       );
     }
+
     /*
     |--------------------------------------------------------------------------
-    | LOAD USER
+    | USER
     |--------------------------------------------------------------------------
     */
+
     const user =
       await prisma.user.findUnique({
         where: {
@@ -131,47 +168,50 @@ export async function executeAITrade(
           accountLocked: true,
         },
       });
+
     if (!user) {
       return failed(
         "User not found."
       );
     }
+
     if (user.accountLocked) {
       return failed(
         "User account is locked."
       );
     }
+
     /*
     |--------------------------------------------------------------------------
-    | LOAD AI SETTINGS
+    | SETTINGS
     |--------------------------------------------------------------------------
     */
+
     const settings =
       await prisma.aITradeSettings.findUnique({
         where: {
           userId,
         },
       });
+
     if (!settings) {
       return failed(
         "AI Trading settings not found."
       );
     }
-    /*
-    |--------------------------------------------------------------------------
-    | AI MUST BE ENABLED BY CLIENT
-    |--------------------------------------------------------------------------
-    */
+
     if (!settings.enabled) {
       return failed(
         "AI Trading is not enabled by the client."
       );
     }
+
     /*
     |--------------------------------------------------------------------------
     | EMERGENCY STOP
     |--------------------------------------------------------------------------
     */
+
     if (
       settings.emergencyStop
     ) {
@@ -179,15 +219,18 @@ export async function executeAITrade(
         "AI Trading emergency stop is active."
       );
     }
+
     /*
     |--------------------------------------------------------------------------
-    | CONFIDENCE PROTECTION
+    | CONFIDENCE
     |--------------------------------------------------------------------------
     */
+
     const minimumConfidence =
       Number(
         settings.minimumConfidence
       );
+
     if (
       !Number.isFinite(
         minimumConfidence
@@ -199,6 +242,7 @@ export async function executeAITrade(
         "AI minimum confidence setting is invalid."
       );
     }
+
     if (
       confidence <
       minimumConfidence
@@ -207,15 +251,18 @@ export async function executeAITrade(
         "Trade confidence is below the configured minimum."
       );
     }
+
     /*
     |--------------------------------------------------------------------------
-    | ALLOCATION VALIDATION
+    | ALLOCATION
     |--------------------------------------------------------------------------
     */
+
     const maximumAllocation =
       Number(
         settings.maximumTradeAllocation
       );
+
     if (
       !Number.isFinite(
         maximumAllocation
@@ -227,101 +274,22 @@ export async function executeAITrade(
         "Maximum trade allocation is invalid."
       );
     }
+
     /*
     |--------------------------------------------------------------------------
     | PAIR
     |--------------------------------------------------------------------------
     */
+
     const pair =
       `${coin}/USDT`;
+
     /*
     |--------------------------------------------------------------------------
-    | INTERNAL BALANCE
-    |--------------------------------------------------------------------------
-    |
-    | BUY:
-    |   Le montant provient du solde USDT interne.
-    |
-    | SELL:
-    |   Le montant provient du solde crypto interne.
-    |
-    */
-    const balanceCoin: Coin =
-      side === "BUY"
-        ? "USDT"
-        : coin;
-    const balance =
-      await prisma.balance.findUnique({
-        where: {
-          userId_coin: {
-            userId,
-            coin: balanceCoin,
-          },
-        },
-      });
-    const availableBalance =
-      Number(
-        balance?.balance ?? 0
-      );
-    if (
-      !Number.isFinite(
-        availableBalance
-      ) ||
-      availableBalance <= 0
-    ) {
-      return failed(
-        `No available ${balanceCoin} balance.`
-      );
-    }
-    /*
-    |--------------------------------------------------------------------------
-    | MAXIMUM ALLOWED AMOUNT
+    | DUPLICATE TRADE PROTECTION
     |--------------------------------------------------------------------------
     */
-    const maximumTradeAmount =
-      availableBalance *
-      (maximumAllocation / 100);
-    if (
-      !Number.isFinite(
-        maximumTradeAmount
-      ) ||
-      maximumTradeAmount <= 0
-    ) {
-      return failed(
-        "Maximum trade amount is invalid."
-      );
-    }
-    /*
-    |--------------------------------------------------------------------------
-    | AMOUNT PROTECTION
-    |--------------------------------------------------------------------------
-    */
-    if (
-      amount >
-      maximumTradeAmount
-    ) {
-      return failed(
-        "Trade amount exceeds the configured maximum allocation."
-      );
-    }
-    /*
-    |--------------------------------------------------------------------------
-    | AVAILABLE BALANCE PROTECTION
-    |--------------------------------------------------------------------------
-    */
-    if (
-      amount >
-      availableBalance
-    ) {
-      return failed(
-        `Insufficient ${balanceCoin} balance.`
-      );
-    }
-    /*
-    |--------------------------------------------------------------------------
-    | PREVENT DUPLICATE OPEN TRADE
-    |--------------------------------------------------------------------------
-    */
+
     const existingTrade =
       await prisma.aITrade.findFirst({
         where: {
@@ -333,19 +301,109 @@ export async function executeAITrade(
           id: true,
         },
       });
+
     if (existingTrade) {
       return failed(
         `An AI trade is already open for ${pair}.`
       );
     }
+
     /*
     |--------------------------------------------------------------------------
-    | CREATE TRADE RECORD
+    | INTERNAL BALANCE
     |--------------------------------------------------------------------------
     |
-    | The database record represents the AI trade allocation.
+    | BUY:
+    | amount = USDT value
+    |
+    | SELL:
+    | amount = crypto quantity
+    |
+    |--------------------------------------------------------------------------
+    */
+
+    const balanceCoin: Coin =
+      side === "BUY"
+        ? "USDT"
+        : coin;
+
+    const balance =
+      await prisma.balance.findUnique({
+        where: {
+          userId_coin: {
+            userId,
+            coin: balanceCoin,
+          },
+        },
+        select: {
+          balance: true,
+        },
+      });
+
+    const availableBalance =
+      Number(
+        balance?.balance ?? 0
+      );
+
+    if (
+      !Number.isFinite(
+        availableBalance
+      ) ||
+      availableBalance <= 0
+    ) {
+      return failed(
+        `No available ${balanceCoin} balance.`
+      );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | MAXIMUM TRADE AMOUNT
+    |--------------------------------------------------------------------------
+    */
+
+    const maximumTradeAmount =
+      availableBalance *
+      (maximumAllocation / 100);
+
+    if (
+      !Number.isFinite(
+        maximumTradeAmount
+      ) ||
+      maximumTradeAmount <= 0
+    ) {
+      return failed(
+        "Maximum trade amount is invalid."
+      );
+    }
+
+    if (
+      amount >
+      maximumTradeAmount
+    ) {
+      return failed(
+        "Trade amount exceeds the configured maximum allocation."
+      );
+    }
+
+    if (
+      amount >
+      availableBalance
+    ) {
+      return failed(
+        `Insufficient ${balanceCoin} balance.`
+      );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | CREATE INTERNAL AI TRADE
+    |--------------------------------------------------------------------------
+    |
+    | On enregistre uniquement après toutes les validations.
     |
     */
+
     const trade =
       await prisma.aITrade.create({
         data: {
@@ -367,16 +425,19 @@ export async function executeAITrade(
             new Date(),
         },
       });
+
     /*
     |--------------------------------------------------------------------------
-    | MARK LATEST AI DECISION
+    | MARK AI DECISION EXECUTED
     |--------------------------------------------------------------------------
     */
+
     const latestDecision =
       await prisma.aITradeDecision.findFirst({
         where: {
           userId,
-          settingsId: settings.id,
+          settingsId:
+            settings.id,
           coin,
           signal: side,
           executed: false,
@@ -385,6 +446,7 @@ export async function executeAITrade(
           createdAt: "desc",
         },
       });
+
     if (latestDecision) {
       await prisma.aITradeDecision.update({
         where: {
@@ -395,21 +457,24 @@ export async function executeAITrade(
         },
       });
     }
+
     /*
     |--------------------------------------------------------------------------
-    | SUCCESS
+    | IMPORTANT
+    |--------------------------------------------------------------------------
+    |
+    | Le trade enregistré ici ne doit PAS être présenté comme un ordre
+    | Bybit réel tant que la couche d'exécution Bybit n'est pas appelée.
+    |
     |--------------------------------------------------------------------------
     */
+
     return {
       success: true,
-      /*
-       * No external order was submitted by this executor.
-       */
-      simulated: false,
+      simulated: true,
       message:
-        `AI ${side} trade recorded successfully for ${pair}.`,
-      tradeId:
-        trade.id,
+        `AI ${side} trade prepared successfully for ${pair}.`,
+      tradeId: trade.id,
       orderId: null,
       orderLinkId: null,
     };
@@ -418,6 +483,7 @@ export async function executeAITrade(
       "AI TRADE EXECUTOR ERROR:",
       error
     );
+
     return {
       success: false,
       simulated: false,

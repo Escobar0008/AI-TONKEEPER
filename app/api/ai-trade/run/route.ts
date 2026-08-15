@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { runAITradingCycle } from "@/lib/ai-trading/runner";
 
 function unauthorized() {
   return NextResponse.json(
@@ -12,7 +11,8 @@ function unauthorized() {
 }
 
 function getCronSecret(request: NextRequest) {
-  const authorization = request.headers.get("authorization");
+  const authorization =
+    request.headers.get("authorization");
 
   if (!authorization) {
     return null;
@@ -24,6 +24,29 @@ function getCronSecret(request: NextRequest) {
 
   return authorization.slice(7).trim();
 }
+
+/*
+|--------------------------------------------------------------------------
+| AI TONKEEPER — SIMULATION RUNNER
+|--------------------------------------------------------------------------
+|
+| IMPORTANT:
+|
+| This endpoint NO LONGER starts the real AI Trading engine.
+|
+| It does NOT:
+| - call runner.ts
+| - create Bybit orders
+| - buy assets
+| - sell assets
+| - open real positions
+| - close real positions
+|
+| The endpoint only confirms that the AI Trading cycle was
+| requested and returns a simulated result for the interface.
+|
+|--------------------------------------------------------------------------
+*/
 
 export async function POST(request: NextRequest) {
   try {
@@ -39,7 +62,7 @@ export async function POST(request: NextRequest) {
         {
           success: false,
           message:
-            "AI Trading runner is not configured.",
+            "AI Trading simulation runner is not configured.",
         },
         { status: 500 }
       );
@@ -55,17 +78,56 @@ export async function POST(request: NextRequest) {
       return unauthorized();
     }
 
-    const result =
-      await runAITradingCycle();
+    /*
+    |--------------------------------------------------------------------------
+    | SIMULATED CYCLE
+    |--------------------------------------------------------------------------
+    |
+    | Nothing is executed here.
+    |
+    */
+
+    const result = {
+      success: true,
+
+      mode: "SIMULATION",
+
+      executed: false,
+
+      tradesCreated: 0,
+
+      tradesExecuted: 0,
+
+      ordersCreated: 0,
+
+      ordersExecuted: 0,
+
+      positionsOpened: 0,
+
+      positionsClosed: 0,
+
+      message:
+        "AI Trading cycle simulated successfully. No real trade was executed.",
+
+      timestamp:
+        new Date().toISOString(),
+    };
+
+    console.log(
+      "AI TRADING SIMULATION CYCLE:",
+      result
+    );
 
     return NextResponse.json(
       {
-        success: result.success,
+        success: true,
+
         message:
-          "AI Trading cycle completed.",
+          "AI Trading simulation cycle completed.",
+
         result,
       },
-      { status: result.success ? 200 : 500 }
+      { status: 200 }
     );
   } catch (error) {
     console.error(
@@ -76,8 +138,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         success: false,
+
         message:
-          "Unable to run AI Trading cycle.",
+          "Unable to run AI Trading simulation cycle.",
       },
       { status: 500 }
     );
