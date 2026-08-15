@@ -1,0 +1,419 @@
+"use client";
+
+import Link from "next/link";
+
+import {
+  ArrowLeft,
+  Receipt,
+  CreditCard,
+  Search,
+  Calendar,
+  Download,
+} from "lucide-react";
+
+export default function FiatHistoryPage() {
+  return (
+    <main className="min-h-screen bg-[#050B18] text-white">
+
+      <div className="mx-auto w-full max-w-md px-5 py-6 pb-28">
+
+        {/* Header */}
+
+        <div className="mb-8 flex items-center justify-between">
+
+          <Link href="/dashboard">
+
+            <button className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-800 bg-[#101A2C]">
+
+              <ArrowLeft size={22} />
+
+            </button>
+
+          </Link>
+
+          <div className="flex-1 px-3 text-center">
+
+            <h1 className="text-2xl font-bold">
+              Fiat History
+            </h1>
+
+            <p className="mt-1 text-sm text-slate-400">
+              View your fiat transaction history
+            </p>
+
+          </div>
+
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-800 bg-[#101A2C]">
+
+            <Receipt
+              size={22}
+              className="text-cyan-400"
+            />
+
+          </div>
+
+        </div>
+
+        {/* Hero */}
+
+        <div className="rounded-3xl bg-gradient-to-br from-cyan-500 to-blue-700 p-6">
+
+          <div className="flex items-center justify-between gap-4">
+
+            <div className="min-w-0 flex-1">
+
+              <h2 className="text-2xl font-bold">
+                Fiat History
+              </h2>
+
+              <p className="mt-2 text-sm text-cyan-100">
+                Track all your fiat purchases and sales completed through supported providers.
+              </p>
+
+            </div>
+
+            <CreditCard
+              size={46}
+              className="shrink-0 text-white"
+            />
+
+          </div>
+
+          <div className="mt-6 rounded-2xl bg-white/10 p-5">
+
+            <p className="text-sm text-cyan-100">
+              Total Transactions
+            </p>
+
+            <p className="mt-2 text-4xl font-bold">
+              0
+            </p>
+
+          </div>
+
+        </div>
+
+        {/* Search */}
+
+        <div className="mt-8">
+
+          <div className="flex items-center gap-3 rounded-2xl border border-slate-800 bg-[#101A2C] px-4 py-4">
+
+            <Search
+              size={22}
+              className="shrink-0 text-slate-400"
+            />
+
+            <input
+              type="text"
+              placeholder="Search transactions..."
+              className="w-full bg-transparent text-white outline-none placeholder:text-slate-500"
+            />
+
+          </div>
+
+        </div>
+
+        {/* Fiat Transactions */}
+        <div className="mt-8 space-y-4">
+
+          {/* Purchase History */}
+
+          <div className="rounded-3xl border border-slate-800 bg-[#101A2C] p-5">
+
+            <div className="flex items-start gap-4">
+
+              <CreditCard
+                size={30}
+                className="shrink-0 text-green-400"
+              />
+
+              <div className="min-w-0 flex-1">
+
+                <h3 className="text-lg font-bold">
+                  Purchase History
+                </h3>
+
+                <p className="mt-2 text-sm text-slate-400">
+                  View all completed cryptocurrency purchases made through supported providers.
+                </p>
+
+              </div>
+
+            </div>
+
+          </div>
+
+          {/* Transaction Date */}
+
+          <div className="rounded-3xl border border-slate-800 bg-[#101A2C] p-5">
+
+            <div className="flex items-start gap-4">
+
+              <Calendar
+                size={30}
+                className="shrink-0 text-cyan-400"
+              />
+
+              <div className="min-w-0 flex-1">
+
+                <h3 className="text-lg font-bold">
+                  Transaction Date
+                </h3>
+
+                <p className="mt-2 text-sm text-slate-400">
+                  Check the exact date and time for every fiat transaction.
+                </p>
+
+              </div>
+
+            </div>
+
+          </div>
+
+          {/* Export History */}
+
+          <div className="rounded-3xl border border-slate-800 bg-[#101A2C] p-5">
+
+            <div className="flex items-start justify-between gap-4">
+
+              <div className="flex min-w-0 flex-1 items-start gap-4">
+
+                <Download
+                  size={30}
+                  className="shrink-0 text-yellow-400"
+                />
+
+                <div className="min-w-0 flex-1">
+
+                  <h3 className="text-lg font-bold">
+                    Export History
+                  </h3>
+
+                  <p className="mt-2 text-sm text-slate-400">
+                    Export your fiat transaction history for personal records.
+                  </p>
+
+                </div>
+
+              </div>
+
+              <button className="rounded-xl bg-cyan-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-cyan-600">
+
+                Export
+
+              </button>
+
+            </div>
+
+          </div>
+
+        </div>
+
+        {/* Fiat Statistics */}
+        <div className="mt-8 rounded-3xl border border-slate-800 bg-[#101A2C] p-6">
+
+          <h2 className="text-xl font-bold">
+            Fiat Statistics
+          </h2>
+
+          <div className="mt-6 space-y-4">
+
+            <div className="flex items-center justify-between">
+
+              <span className="text-slate-400">
+                Total Purchases
+              </span>
+
+              <span className="font-bold">
+                0
+              </span>
+
+            </div>
+
+            <div className="flex items-center justify-between">
+
+              <span className="text-slate-400">
+                Total Spent
+              </span>
+
+              <span className="font-bold text-green-400">
+                $0.00
+              </span>
+
+            </div>
+
+            <div className="flex items-center justify-between">
+
+              <span className="text-slate-400">
+                Last Transaction
+              </span>
+
+              <span className="font-bold">
+                Never
+              </span>
+
+            </div>
+
+            <div className="flex items-center justify-between">
+
+              <span className="text-slate-400">
+                Status
+              </span>
+
+              <span className="font-bold text-cyan-400">
+                No Transactions
+              </span>
+
+            </div>
+
+          </div>
+
+        </div>
+
+        {/* History Overview */}
+
+        <div className="mt-8 rounded-3xl bg-gradient-to-br from-cyan-500 to-blue-700 p-6">
+
+          <div className="flex items-center justify-between gap-4">
+
+            <div className="min-w-0 flex-1">
+
+              <h2 className="text-xl font-bold">
+                History Overview
+              </h2>
+
+              <p className="mt-2 text-sm text-cyan-100">
+                Monitor your complete fiat payment history and transaction activity across supported providers.
+              </p>
+
+            </div>
+
+            <Receipt
+              size={40}
+              className="shrink-0 text-white"
+            />
+
+          </div>
+
+          <div className="mt-6">
+
+            <div className="h-3 w-full overflow-hidden rounded-full bg-white/20">
+
+              <div className="h-full w-0 rounded-full bg-white"></div>
+
+            </div>
+
+            <div className="mt-3 flex items-center justify-between text-sm">
+
+              <span>
+                History Progress
+              </span>
+
+              <span className="font-bold">
+                0%
+              </span>
+
+            </div>
+
+          </div>
+
+        </div>
+
+        {/* Transaction Details */}
+        <div className="mt-8 rounded-3xl border border-slate-800 bg-[#101A2C] p-6">
+
+          <h2 className="text-xl font-bold">
+            Transaction Details
+          </h2>
+
+          <div className="mt-6 space-y-4">
+
+            <div className="flex items-center justify-between">
+
+              <span className="text-slate-400">
+                Completed Transactions
+              </span>
+
+              <span className="font-bold text-green-400">
+                0
+              </span>
+
+            </div>
+
+            <div className="flex items-center justify-between">
+
+              <span className="text-slate-400">
+                Pending Transactions
+              </span>
+
+              <span className="font-bold text-yellow-400">
+                0
+              </span>
+
+            </div>
+
+            <div className="flex items-center justify-between">
+
+              <span className="text-slate-400">
+                Failed Transactions
+              </span>
+
+              <span className="font-bold text-red-400">
+                0
+              </span>
+
+            </div>
+
+            <div className="flex items-center justify-between">
+
+              <span className="text-slate-400">
+                Last Export
+              </span>
+
+              <span className="font-bold">
+                Never
+              </span>
+
+            </div>
+
+            <div className="flex items-center justify-between">
+
+              <span className="text-slate-400">
+                Supported Provider
+              </span>
+
+              <span className="font-bold text-cyan-400">
+                Onramper
+              </span>
+
+            </div>
+
+          </div>
+
+        </div>
+
+        {/* Footer */}
+
+        <footer className="mt-10 border-t border-slate-800 pt-6 text-center">
+
+          <p className="text-sm text-slate-500">
+            AI TONKEEPER Fiat History
+          </p>
+
+          <p className="mt-2 font-semibold text-cyan-400">
+            ai-tonkeeper.xyz
+          </p>
+
+          <p className="mt-4 text-xs text-slate-600">
+            © 2026 AI TONKEEPER. All rights reserved.
+          </p>
+
+        </footer>
+
+      </div>
+
+    </main>
+
+  );
+}

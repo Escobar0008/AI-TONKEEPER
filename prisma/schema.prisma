@@ -1,0 +1,409 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                      String              @id @default(cuid())
+  name                    String?
+  email                   String              @unique
+  password                String
+  role                    Role                @default(USER)
+  emailVerified           Boolean             @default(false)
+  createdAt               DateTime            @default(now())
+  updatedAt               DateTime            @updatedAt
+  verificationCode        String?
+  verificationSent        DateTime?
+  accountLocked           Boolean             @default(false)
+  pinHash                 String?
+  twoFactorEnabled        Boolean             @default(false)
+  pinResetCode            String?
+  pinResetExpiresAt       DateTime?
+  pinResetSent            DateTime?
+  emailChangeCode         String?
+  emailChangePendingEmail String?
+  emailChangeSent         DateTime?
+  aiTrades                AITrade[]
+  aiTradeDecisions        AITradeDecision[]
+  aiTradeSettings         AITradeSettings?
+  balances                Balance[]
+  kycApplication          KYCApplication?
+  notifications           Notification[]
+  securityDevices         SecurityDevice[]
+  securityLogs            SecurityLog[]
+  swapRequests            SwapRequest[]
+  transactions            Transaction[]
+  settings                UserSettings?
+  wallet                  Wallet?
+  withdrawals             WithdrawalRequest[]
+}
+
+model UserSettings {
+  id                   String      @id @default(cuid())
+  userId               String      @unique
+  language             AppLanguage @default(ENGLISH)
+  pushNotifications    Boolean     @default(true)
+  emailAlerts          Boolean     @default(true)
+  depositNotifications Boolean     @default(true)
+  aiTradingAlerts      Boolean     @default(true)
+  securityAlerts       Boolean     @default(true)
+  referralRewards      Boolean     @default(true)
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
+  user                 User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model KYCApplication {
+  id              String        @id @default(cuid())
+  userId          String        @unique
+  fullName        String?
+  email           String?
+  phone           String?
+  birthDate       DateTime?
+  country         String?
+  status          KYCStatus     @default(PENDING)
+  rejectionReason String?
+  reviewedAt      DateTime?
+  reviewedBy      String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documents       KYCDocument[]
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+model KYCDocument {
+  id            String         @id @default(cuid())
+  applicationId String
+  type          KYCFileType
+  fileName      String
+  mimeType      String
+  fileSize      Int
+  fileData      Bytes
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  application   KYCApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@unique([applicationId, type])
+  @@index([applicationId])
+}
+
+model Wallet {
+  id        String   @id @default(cuid())
+  walletId  String   @unique
+  userId    String   @unique
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Balance {
+  id        String   @id @default(cuid())
+  userId    String
+  coin      Coin
+  balance   Float    @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, coin])
+}
+
+model Transaction {
+  id          String            @id @default(cuid())
+  userId      String
+  coin        Coin
+  type        TransactionType
+  amount      Float
+  fee         Float             @default(0)
+  fromAddress String?
+  toAddress   String?
+  txHash      String?
+  status      TransactionStatus @default(PENDING)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model WithdrawalRequest {
+  id        String           @id @default(cuid())
+  userId    String
+  coin      Coin
+  amount    Float
+  fee       Float            @default(0)
+  address   String
+  status    WithdrawalStatus @default(PENDING)
+  txHash    String?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model SwapRequest {
+  id         String     @id @default(cuid())
+  userId     String
+  fromCoin   Coin
+  toCoin     Coin
+  fromAmount Float
+  toAmount   Float
+  rate       Float
+  fee        Float      @default(0)
+  status     SwapStatus @default(PENDING)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model MainWallet {
+  id        String   @id @default(cuid())
+  coin      Coin     @unique
+  network   String
+  address   String   @unique
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SecurityDevice {
+  id         String   @id @default(cuid())
+  userId     String
+  deviceName String
+  deviceType String?
+  ipAddress  String?
+  userAgent  String?
+  trusted    Boolean  @default(false)
+  lastUsedAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model SecurityLog {
+  id          String   @id @default(cuid())
+  userId      String
+  action      String
+  description String?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model AITradeSettings {
+  id                     String            @id @default(cuid())
+  userId                 String            @unique
+  strategy               AITradeStrategy   @default(BALANCED)
+  riskLevel              AIRiskLevel       @default(MEDIUM)
+  minimumConfidence      Float             @default(70)
+  maximumTradeAllocation Float             @default(10)
+  stopLossProtection     Boolean           @default(true)
+  dailyLossProtection    Boolean           @default(true)
+  emergencyStop          Boolean           @default(true)
+  enabled                Boolean           @default(false)
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
+  trades                 AITrade[]
+  decisions              AITradeDecision[]
+  user                   User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model AITrade {
+  id           String           @id @default(cuid())
+  userId       String
+  settingsId   String?
+  coin         Coin
+  pair         String
+  side         AITradeSide
+  status       AITradeStatus    @default(PENDING)
+  amount       Float
+  entryPrice   Float            @default(0)
+  currentPrice Float            @default(0)
+  exitPrice    Float?
+  profit       Float            @default(0)
+  fee          Float            @default(0)
+  confidence   Float            @default(0)
+  openedAt     DateTime?
+  closedAt     DateTime?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  settings     AITradeSettings? @relation(fields: [settingsId], references: [id])
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([settingsId])
+  @@index([status])
+  @@index([coin])
+  @@index([createdAt])
+}
+
+model AITradeDecision {
+  id         String           @id @default(cuid())
+  userId     String
+  settingsId String?
+  coin       Coin
+  pair       String
+  signal     AITradeSignal
+  confidence Float
+  price      Float
+  reason     String?
+  executed   Boolean          @default(false)
+  createdAt  DateTime         @default(now())
+  settings   AITradeSettings? @relation(fields: [settingsId], references: [id])
+  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([settingsId])
+  @@index([coin])
+  @@index([signal])
+  @@index([createdAt])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String
+  read      Boolean          @default(false)
+  actionUrl String?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, read])
+  @@index([createdAt])
+}
+
+enum AppLanguage {
+  ENGLISH
+  FRENCH
+  SPANISH
+  GERMAN
+}
+
+enum KYCFileType {
+  ID_DOCUMENT
+  SELFIE
+  ADDRESS_PROOF
+}
+
+enum Coin {
+  TON
+  BTC
+  ETH
+  USDT
+  BNB
+}
+
+enum TransactionType {
+  DEPOSIT
+  WITHDRAW
+  BUY
+  SELL
+  TRANSFER
+  SWAP
+}
+
+enum TransactionStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum WithdrawalStatus {
+  PENDING
+  APPROVED
+  SENT
+  REJECTED
+}
+
+enum SwapStatus {
+  PENDING
+  APPROVED
+  PROCESSING
+  COMPLETED
+  REJECTED
+  FAILED
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum KYCStatus {
+  PENDING
+  UNDER_REVIEW
+  VERIFIED
+  REJECTED
+}
+
+enum AITradeStrategy {
+  CONSERVATIVE
+  BALANCED
+  AGGRESSIVE
+}
+
+enum AIRiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum AITradeSide {
+  BUY
+  SELL
+}
+
+enum AITradeStatus {
+  PENDING
+  OPEN
+  CLOSED
+  FAILED
+  CANCELLED
+}
+
+enum AITradeSignal {
+  BUY
+  SELL
+  WAIT
+}
+
+enum NotificationType {
+  SYSTEM
+  SECURITY
+  KYC
+  DEPOSIT
+  WITHDRAWAL
+  SWAP
+  AI_TRADE
+  REFERRAL
+}
