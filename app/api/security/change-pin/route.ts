@@ -3,13 +3,15 @@ import bcrypt from "bcryptjs";
 
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
-import { resend } from "@/lib/resend";
+import { getResend } from "@/lib/resend";
 
 type PinAction =
   | "create"
   | "change"
   | "send-reset"
   | "reset";
+
+const CODE_EXPIRATION_MS = 10 * 60 * 1000;
 
 function getRequestSecurityInfo(request: NextRequest) {
   const userAgent =
@@ -32,11 +34,11 @@ function getRequestSecurityInfo(request: NextRequest) {
   };
 }
 
-function isValidPin(pin: string) {
+function isValidPin(pin: string): boolean {
   return /^\d{4,6}$/.test(pin);
 }
 
-function generateVerificationCode() {
+function generateVerificationCode(): string {
   return Math.floor(
     100000 + Math.random() * 900000
   ).toString();
@@ -124,25 +126,8 @@ export async function POST(request: NextRequest) {
     // ============================================================
     // 5. AUTO-DETECT CHANGE ACTION
     // ============================================================
-    //
-    // Le SecurityPage actuel envoie :
-    //
-    // {
-    //   currentPin,
-    //   newPin
-    // }
-    //
-    // sans envoyer action:"change".
-    //
-    // On garde donc la compatibilité avec le frontend actuel.
-    //
-    // ============================================================
 
-    if (
-      !action &&
-      currentPin &&
-      newPin
-    ) {
+    if (!action && currentPin && newPin) {
       action = "change";
     }
 
@@ -355,8 +340,7 @@ export async function POST(request: NextRequest) {
       const verificationCode =
         generateVerificationCode();
 
-      const verificationSent =
-        new Date();
+      const verificationSent = new Date();
 
       await prisma.user.update({
         where: {
@@ -368,104 +352,137 @@ export async function POST(request: NextRequest) {
         },
       });
 
+      // ==========================================================
+      // RESEND
+      // ==========================================================
+
       try {
-        await resend.emails.send({
-          from:
-            "AI TONKEEPER <onboarding@resend.dev>",
-          to: user.email,
-          subject:
-            "AI TONKEEPER - PIN Reset Code",
-          html: `
-            <div
-              style="
-                font-family:Arial,sans-serif;
-                background:#050B18;
-                padding:32px;
-                color:#ffffff;
-              "
-            >
+        const resend = getResend();
+
+        const emailResult =
+          await resend.emails.send({
+            from:
+              "AI TONKEEPER <onboarding@resend.dev>",
+            to: user.email,
+            subject:
+              "AI TONKEEPER - PIN Reset Code",
+            html: `
               <div
                 style="
-                  max-width:520px;
-                  margin:auto;
-                  background:#101A2C;
-                  border-radius:20px;
-                  padding:28px;
+                  font-family:Arial,sans-serif;
+                  background:#050B18;
+                  padding:32px;
+                  color:#ffffff;
                 "
               >
-                <h2
-                  style="
-                    margin:0 0 16px;
-                    color:#ffffff;
-                  "
-                >
-                  AI TONKEEPER
-                </h2>
-
-                <p
-                  style="
-                    color:#cbd5e1;
-                    line-height:1.6;
-                  "
-                >
-                  You requested to reset the security PIN
-                  for your AI TONKEEPER account.
-                </p>
-
-                <p
-                  style="
-                    color:#cbd5e1;
-                    line-height:1.6;
-                  "
-                >
-                  Your PIN reset verification code is:
-                </p>
-
                 <div
                   style="
-                    margin:24px 0;
-                    padding:20px;
-                    text-align:center;
-                    background:#050B18;
-                    border-radius:16px;
+                    max-width:520px;
+                    margin:auto;
+                    background:#101A2C;
+                    border-radius:20px;
+                    padding:28px;
                   "
                 >
-                  <div
+                  <h2
                     style="
-                      font-size:38px;
-                      font-weight:bold;
-                      letter-spacing:10px;
-                      color:#22d3ee;
+                      margin:0 0 16px;
+                      color:#ffffff;
                     "
                   >
-                    ${verificationCode}
+                    AI TONKEEPER
+                  </h2>
+
+                  <p
+                    style="
+                      color:#cbd5e1;
+                      line-height:1.6;
+                    "
+                  >
+                    You requested to reset the security PIN
+                    for your AI TONKEEPER account.
+                  </p>
+
+                  <p
+                    style="
+                      color:#cbd5e1;
+                      line-height:1.6;
+                    "
+                  >
+                    Your PIN reset verification code is:
+                  </p>
+
+                  <div
+                    style="
+                      margin:24px 0;
+                      padding:20px;
+                      text-align:center;
+                      background:#050B18;
+                      border-radius:16px;
+                    "
+                  >
+                    <div
+                      style="
+                        font-size:38px;
+                        font-weight:bold;
+                        letter-spacing:10px;
+                        color:#22d3ee;
+                      "
+                    >
+                      ${verificationCode}
+                    </div>
                   </div>
+
+                  <p
+                    style="
+                      color:#94a3b8;
+                      font-size:14px;
+                      line-height:1.6;
+                    "
+                  >
+                    This code expires after 10 minutes.
+                  </p>
+
+                  <p
+                    style="
+                      color:#94a3b8;
+                      font-size:14px;
+                      line-height:1.6;
+                    "
+                  >
+                    If you did not request a PIN reset,
+                    you can safely ignore this email.
+                  </p>
                 </div>
-
-                <p
-                  style="
-                    color:#94a3b8;
-                    font-size:14px;
-                    line-height:1.6;
-                  "
-                >
-                  This code expires after 10 minutes.
-                </p>
-
-                <p
-                  style="
-                    color:#94a3b8;
-                    font-size:14px;
-                    line-height:1.6;
-                  "
-                >
-                  If you did not request a PIN reset,
-                  you can safely ignore this email.
-                </p>
               </div>
-            </div>
-          `,
-        });
+            `,
+          });
+
+        if (emailResult.error) {
+          console.error(
+            "PIN_RESET_RESEND_ERROR:",
+            emailResult.error
+          );
+
+          await prisma.user.update({
+            where: {
+              id: userId,
+            },
+            data: {
+              verificationCode: null,
+              verificationSent: null,
+            },
+          });
+
+          return NextResponse.json(
+            {
+              success: false,
+              message:
+                "Unable to send the PIN reset code. Please try again.",
+            },
+            { status: 500 }
+          );
+        }
       } catch (emailError) {
         console.error(
           "PIN_RESET_EMAIL_ERROR:",
@@ -583,16 +600,11 @@ export async function POST(request: NextRequest) {
 
       const codeAge =
         Date.now() -
-        new Date(
-          user.verificationSent
-        ).getTime();
-
-      const tenMinutes =
-        10 * 60 * 1000;
+        user.verificationSent.getTime();
 
       if (
         codeAge < 0 ||
-        codeAge > tenMinutes
+        codeAge > CODE_EXPIRATION_MS
       ) {
         await prisma.user.update({
           where: {
@@ -614,9 +626,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      if (
-        code !== user.verificationCode
-      ) {
+      if (code !== user.verificationCode) {
         return NextResponse.json(
           {
             success: false,

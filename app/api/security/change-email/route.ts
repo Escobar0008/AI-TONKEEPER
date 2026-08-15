@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
-import { resend } from "@/lib/resend";
+import { getResend } from "@/lib/resend";
 import crypto from "crypto";
 
 const CODE_EXPIRATION_MS = 10 * 60 * 1000;
@@ -23,6 +23,8 @@ function getClientIp(request: NextRequest): string | null {
 
 export async function POST(request: NextRequest) {
   try {
+    const resend = getResend();
+
     // ============================================================
     // 1. Vérifier la session
     // ============================================================
@@ -48,6 +50,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
 
     const action = String(body.action ?? "").trim();
+
     const newEmail = String(body.newEmail ?? "")
       .trim()
       .toLowerCase();
@@ -94,8 +97,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const emailRegex =
-      /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     if (!emailRegex.test(newEmail)) {
       return NextResponse.json(
@@ -166,83 +168,155 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // ----------------------------------------------------------
-      // Envoyer le code à l'ANCIEN e-mail
-      // ----------------------------------------------------------
-
       const emailResult =
         await resend.emails.send({
           from: "AI TONKEEPER <onboarding@resend.dev>",
-          to: user.email,
+          to: [user.email],
           subject:
             "Code de sécurité - Changement d'adresse e-mail",
           html: `
-            <div
-              style="
-                font-family:Arial,sans-serif;
-                background:#050B18;
-                color:#ffffff;
-                padding:32px;
-              "
-            >
-              <div
+            <!DOCTYPE html>
+            <html lang="fr">
+              <head>
+                <meta charset="UTF-8" />
+                <meta
+                  name="viewport"
+                  content="width=device-width, initial-scale=1.0"
+                />
+                <title>AI TONKEEPER</title>
+              </head>
+
+              <body
                 style="
-                  max-width:520px;
-                  margin:auto;
-                  background:#101A2C;
-                  border-radius:16px;
-                  padding:32px;
+                  margin:0;
+                  padding:0;
+                  background:#050B18;
+                  font-family:Arial,Helvetica,sans-serif;
+                  color:#ffffff;
                 "
               >
-                <h2 style="margin-bottom:20px;">
-                  AI TONKEEPER
-                </h2>
-
-                <p>
-                  Une demande de changement d'adresse e-mail
-                  a été effectuée sur votre compte.
-                </p>
-
-                <p>
-                  Pour confirmer que cette demande vient bien
-                  de vous, utilisez le code de sécurité suivant :
-                </p>
-
                 <div
                   style="
-                    margin:28px 0;
-                    padding:20px;
-                    background:#050B18;
-                    border-radius:12px;
-                    text-align:center;
+                    max-width:600px;
+                    margin:0 auto;
+                    padding:40px 20px;
                   "
                 >
-                  <span
+                  <div
                     style="
-                      font-size:36px;
-                      font-weight:bold;
-                      letter-spacing:8px;
-                      color:#22d3ee;
+                      background:#101A2C;
+                      border:1px solid #1e293b;
+                      border-radius:20px;
+                      padding:32px;
+                      text-align:center;
                     "
                   >
-                    ${verificationCode}
-                  </span>
+                    <h1
+                      style="
+                        margin:0 0 10px;
+                        color:#22d3ee;
+                        font-size:28px;
+                      "
+                    >
+                      AI TONKEEPER
+                    </h1>
+
+                    <p
+                      style="
+                        margin:0 0 30px;
+                        color:#94a3b8;
+                        font-size:14px;
+                      "
+                    >
+                      Secure TON Wallet • AI Powered
+                    </p>
+
+                    <h2
+                      style="
+                        margin:0 0 20px;
+                        color:#ffffff;
+                      "
+                    >
+                      Code de sécurité
+                    </h2>
+
+                    <p
+                      style="
+                        color:#cbd5e1;
+                        font-size:15px;
+                        line-height:1.6;
+                      "
+                    >
+                      Une demande de changement d'adresse
+                      e-mail a été effectuée sur votre compte.
+                    </p>
+
+                    <p
+                      style="
+                        color:#cbd5e1;
+                        font-size:15px;
+                        line-height:1.6;
+                      "
+                    >
+                      Pour confirmer que cette demande vient
+                      bien de vous, utilisez le code suivant :
+                    </p>
+
+                    <div
+                      style="
+                        margin:30px 0;
+                        padding:20px;
+                        background:#050B18;
+                        border:1px solid #0891b2;
+                        border-radius:16px;
+                      "
+                    >
+                      <span
+                        style="
+                          color:#22d3ee;
+                          font-size:40px;
+                          font-weight:bold;
+                          letter-spacing:8px;
+                        "
+                      >
+                        ${verificationCode}
+                      </span>
+                    </div>
+
+                    <p
+                      style="
+                        color:#94a3b8;
+                        font-size:13px;
+                      "
+                    >
+                      Ce code est valable pendant 10 minutes.
+                    </p>
+
+                    <p
+                      style="
+                        margin-top:25px;
+                        color:#64748b;
+                        font-size:12px;
+                      "
+                    >
+                      Si vous n'êtes pas à l'origine de cette
+                      demande, sécurisez immédiatement votre compte.
+                    </p>
+                  </div>
+
+                  <p
+                    style="
+                      margin-top:20px;
+                      text-align:center;
+                      color:#475569;
+                      font-size:12px;
+                    "
+                  >
+                    © 2026 AI TONKEEPER
+                  </p>
                 </div>
-
-                <p>
-                  Ce code est valable pendant 10 minutes.
-                </p>
-
-                <p>
-                  Si vous n'êtes pas à l'origine de cette
-                  demande, sécurisez immédiatement votre compte.
-                </p>
-
-                <p style="margin-top:30px;color:#94a3b8;">
-                  AI TONKEEPER Security
-                </p>
-              </div>
-            </div>
+              </body>
+            </html>
           `,
         });
 
@@ -252,7 +326,6 @@ export async function POST(request: NextRequest) {
           emailResult.error
         );
 
-        // Ne pas laisser un code inutilisable rester actif.
         await prisma.user.update({
           where: {
             id: userId,
@@ -272,10 +345,6 @@ export async function POST(request: NextRequest) {
           { status: 500 }
         );
       }
-
-      // ----------------------------------------------------------
-      // Security Log
-      // ----------------------------------------------------------
 
       await prisma.securityLog.create({
         data: {
@@ -312,10 +381,6 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // ----------------------------------------------------------
-      // Le code doit contenir exactement 6 chiffres
-      // ----------------------------------------------------------
-
       if (!/^\d{6}$/.test(code)) {
         return NextResponse.json(
           {
@@ -327,10 +392,6 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // ----------------------------------------------------------
-      // Vérifier qu'un code existe
-      // ----------------------------------------------------------
-
       if (!user.verificationCode) {
         return NextResponse.json(
           {
@@ -341,10 +402,6 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
-
-      // ----------------------------------------------------------
-      // Vérifier la date d'envoi
-      // ----------------------------------------------------------
 
       if (!user.verificationSent) {
         return NextResponse.json(
@@ -385,10 +442,6 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // ----------------------------------------------------------
-      // Vérifier le code
-      // ----------------------------------------------------------
-
       if (code !== user.verificationCode) {
         return NextResponse.json(
           {
@@ -400,9 +453,9 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // ----------------------------------------------------------
-      // Dernière vérification de disponibilité du nouvel e-mail
-      // ----------------------------------------------------------
+      // ==========================================================
+      // Dernière vérification de disponibilité
+      // ==========================================================
 
       const emailStillAvailable =
         await prisma.user.findUnique({
@@ -429,7 +482,7 @@ export async function POST(request: NextRequest) {
       }
 
       // ==========================================================
-      // 7. Changement définitif
+      // Changement définitif
       // ==========================================================
 
       const ipAddress =

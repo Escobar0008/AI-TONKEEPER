@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { resend } from "@/lib/resend";
+import { getResend } from "@/lib/resend";
 
 export async function POST(request: NextRequest) {
   try {
     const { email } = await request.json();
 
-    if (!email) {
+    if (!email || typeof email !== "string") {
       return NextResponse.json(
         {
           success: false,
@@ -16,9 +16,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const normalizedEmail = email.trim().toLowerCase();
+
     const user = await prisma.user.findUnique({
       where: {
-        email,
+        email: normalizedEmail,
       },
     });
 
@@ -26,7 +28,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          message: "Aucun compte trouvé avec cette adresse e-mail.",
+          message:
+            "Aucun compte trouvé avec cette adresse e-mail.",
         },
         { status: 404 }
       );
@@ -38,7 +41,7 @@ export async function POST(request: NextRequest) {
 
     await prisma.user.update({
       where: {
-        email,
+        email: normalizedEmail,
       },
       data: {
         verificationCode: resetCode,
@@ -46,36 +49,93 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    await resend.emails.send({
+    await getResend().emails.send({
       from: "AI TONKEEPER <onboarding@resend.dev>",
-      to: email,
-      subject: "Réinitialisation du mot de passe AI TONKEEPER",
+      to: normalizedEmail,
+      subject:
+        "Réinitialisation du mot de passe AI TONKEEPER",
       html: `
-        <div style="font-family:Arial,sans-serif;padding:20px">
-          <h2>Réinitialisation du mot de passe</h2>
+        <div style="
+          font-family:Arial,Helvetica,sans-serif;
+          padding:20px;
+          background:#050B18;
+          color:#ffffff;
+        ">
 
-          <p>Votre code de vérification est :</p>
+          <div style="
+            max-width:600px;
+            margin:0 auto;
+            padding:30px;
+            background:#101A2C;
+            border:1px solid #1e293b;
+            border-radius:20px;
+          ">
 
-          <h1 style="font-size:40px;letter-spacing:8px;color:#06b6d4;">
-            ${resetCode}
-          </h1>
+            <h2 style="
+              color:#22d3ee;
+              margin-top:0;
+            ">
+              AI TONKEEPER
+            </h2>
 
-          <p>Ce code expire dans quelques minutes.</p>
+            <h3>
+              Réinitialisation du mot de passe
+            </h3>
 
-          <p>
-            Si vous n'avez pas demandé cette réinitialisation,
-            ignorez cet e-mail.
-          </p>
+            <p style="color:#cbd5e1;">
+              Votre code de vérification est :
+            </p>
+
+            <div style="
+              margin:25px 0;
+              padding:20px;
+              text-align:center;
+              background:#050B18;
+              border:1px solid #0891b2;
+              border-radius:16px;
+            ">
+
+              <span style="
+                font-size:40px;
+                font-weight:bold;
+                letter-spacing:8px;
+                color:#22d3ee;
+              ">
+                ${resetCode}
+              </span>
+
+            </div>
+
+            <p style="color:#94a3b8;">
+              Ce code expire dans quelques minutes.
+            </p>
+
+            <p style="
+              color:#64748b;
+              font-size:13px;
+            ">
+              Si vous n'avez pas demandé cette
+              réinitialisation, ignorez cet e-mail.
+            </p>
+
+          </div>
+
         </div>
       `,
     });
 
-    return NextResponse.json({
-      success: true,
-      message: "Code envoyé avec succès.",
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        message: "Code envoyé avec succès.",
+      },
+      { status: 200 }
+    );
   } catch (error: unknown) {
-    console.error(error);
+    console.error(
+      "FORGOT PASSWORD ERROR:",
+      error
+    );
 
     const message =
       error instanceof Error

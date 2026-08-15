@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { resend } from "@/lib/resend";
+import { getResend } from "@/lib/resend";
 
 export async function POST(request: NextRequest) {
   try {
+    const resend = getResend();
+
     const session = await auth();
 
     if (!session?.user?.id) {
@@ -38,9 +40,12 @@ export async function POST(request: NextRequest) {
     }
 
     /*
+     * ============================================================
      * ENABLE
      * Demande l'activation de la 2FA.
+     * ============================================================
      */
+
     if (action === "enable") {
       if (user.twoFactorEnabled) {
         return NextResponse.json({
@@ -64,42 +69,180 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      await resend.emails.send({
+      const emailResult = await resend.emails.send({
         from: "AI TONKEEPER <onboarding@resend.dev>",
-        to: user.email,
+        to: [user.email],
         subject: "Activation de la 2FA - AI TONKEEPER",
         html: `
-          <div style="font-family:Arial,sans-serif;padding:24px">
-            <h2>AI TONKEEPER</h2>
+          <!DOCTYPE html>
+          <html lang="fr">
+            <head>
+              <meta charset="UTF-8" />
+              <meta
+                name="viewport"
+                content="width=device-width, initial-scale=1.0"
+              />
+              <title>Activation 2FA</title>
+            </head>
 
-            <p>
-              Vous avez demandé l'activation de
-              l'authentification à deux facteurs.
-            </p>
-
-            <p>Votre code de confirmation est :</p>
-
-            <h1
+            <body
               style="
-                font-size:40px;
-                letter-spacing:8px;
-                color:#06b6d4;
+                margin:0;
+                padding:0;
+                background:#050B18;
+                font-family:Arial,Helvetica,sans-serif;
+                color:#ffffff;
               "
             >
-              ${verificationCode}
-            </h1>
+              <div
+                style="
+                  max-width:600px;
+                  margin:0 auto;
+                  padding:40px 20px;
+                "
+              >
+                <div
+                  style="
+                    background:#101A2C;
+                    border:1px solid #1e293b;
+                    border-radius:20px;
+                    padding:32px;
+                    text-align:center;
+                  "
+                >
+                  <h1
+                    style="
+                      margin:0 0 10px;
+                      color:#22d3ee;
+                      font-size:28px;
+                    "
+                  >
+                    AI TONKEEPER
+                  </h1>
 
-            <p>
-              Ce code expire dans 10 minutes.
-            </p>
+                  <p
+                    style="
+                      margin:0 0 30px;
+                      color:#94a3b8;
+                      font-size:14px;
+                    "
+                  >
+                    Secure TON Wallet • AI Powered
+                  </p>
 
-            <p>
-              Si vous n'avez pas demandé cette activation,
-              ignorez cet e-mail.
-            </p>
-          </div>
+                  <h2
+                    style="
+                      color:#ffffff;
+                      margin:0 0 15px;
+                    "
+                  >
+                    Activation de la 2FA
+                  </h2>
+
+                  <p
+                    style="
+                      color:#cbd5e1;
+                      font-size:15px;
+                      line-height:1.6;
+                    "
+                  >
+                    Vous avez demandé l'activation de
+                    l'authentification à deux facteurs.
+                  </p>
+
+                  <p
+                    style="
+                      color:#cbd5e1;
+                      font-size:15px;
+                      line-height:1.6;
+                    "
+                  >
+                    Votre code de confirmation est :
+                  </p>
+
+                  <div
+                    style="
+                      margin:30px 0;
+                      padding:20px;
+                      background:#050B18;
+                      border:1px solid #0891b2;
+                      border-radius:16px;
+                    "
+                  >
+                    <span
+                      style="
+                        color:#22d3ee;
+                        font-size:40px;
+                        font-weight:bold;
+                        letter-spacing:8px;
+                      "
+                    >
+                      ${verificationCode}
+                    </span>
+                  </div>
+
+                  <p
+                    style="
+                      color:#94a3b8;
+                      font-size:13px;
+                    "
+                  >
+                    Ce code expire dans 10 minutes.
+                  </p>
+
+                  <p
+                    style="
+                      margin-top:25px;
+                      color:#64748b;
+                      font-size:12px;
+                    "
+                  >
+                    Si vous n'avez pas demandé cette activation,
+                    ignorez cet e-mail.
+                  </p>
+                </div>
+
+                <p
+                  style="
+                    margin-top:20px;
+                    text-align:center;
+                    color:#475569;
+                    font-size:12px;
+                  "
+                >
+                  © 2026 AI TONKEEPER
+                </p>
+              </div>
+            </body>
+          </html>
         `,
       });
+
+      if (emailResult.error) {
+        console.error(
+          "2FA ENABLE RESEND ERROR:",
+          emailResult.error
+        );
+
+        await prisma.user.update({
+          where: {
+            id: userId,
+          },
+          data: {
+            verificationCode: null,
+            verificationSent: null,
+          },
+        });
+
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "Impossible d'envoyer le code par e-mail.",
+          },
+          { status: 500 }
+        );
+      }
 
       await prisma.securityLog.create({
         data: {
@@ -119,9 +262,12 @@ export async function POST(request: NextRequest) {
     }
 
     /*
+     * ============================================================
      * VERIFY ENABLE
      * Vérifie le code puis active réellement la 2FA.
+     * ============================================================
      */
+
     if (action === "verify-enable") {
       if (!code) {
         return NextResponse.json(
@@ -137,8 +283,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           {
             success: false,
-            message:
-              "Aucun code de vérification actif.",
+            message: "Aucun code de vérification actif.",
           },
           { status: 400 }
         );
@@ -200,9 +345,12 @@ export async function POST(request: NextRequest) {
     }
 
     /*
+     * ============================================================
      * DISABLE
      * Demande un code avant de désactiver la 2FA.
+     * ============================================================
      */
+
     if (action === "disable") {
       if (!user.twoFactorEnabled) {
         return NextResponse.json({
@@ -226,42 +374,180 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      await resend.emails.send({
+      const emailResult = await resend.emails.send({
         from: "AI TONKEEPER <onboarding@resend.dev>",
-        to: user.email,
+        to: [user.email],
         subject: "Désactivation de la 2FA - AI TONKEEPER",
         html: `
-          <div style="font-family:Arial,sans-serif;padding:24px">
-            <h2>AI TONKEEPER</h2>
+          <!DOCTYPE html>
+          <html lang="fr">
+            <head>
+              <meta charset="UTF-8" />
+              <meta
+                name="viewport"
+                content="width=device-width, initial-scale=1.0"
+              />
+              <title>Désactivation 2FA</title>
+            </head>
 
-            <p>
-              Vous avez demandé la désactivation
-              de l'authentification à deux facteurs.
-            </p>
-
-            <p>Votre code de confirmation est :</p>
-
-            <h1
+            <body
               style="
-                font-size:40px;
-                letter-spacing:8px;
-                color:#06b6d4;
+                margin:0;
+                padding:0;
+                background:#050B18;
+                font-family:Arial,Helvetica,sans-serif;
+                color:#ffffff;
               "
             >
-              ${verificationCode}
-            </h1>
+              <div
+                style="
+                  max-width:600px;
+                  margin:0 auto;
+                  padding:40px 20px;
+                "
+              >
+                <div
+                  style="
+                    background:#101A2C;
+                    border:1px solid #1e293b;
+                    border-radius:20px;
+                    padding:32px;
+                    text-align:center;
+                  "
+                >
+                  <h1
+                    style="
+                      margin:0 0 10px;
+                      color:#22d3ee;
+                      font-size:28px;
+                    "
+                  >
+                    AI TONKEEPER
+                  </h1>
 
-            <p>
-              Ce code expire dans 10 minutes.
-            </p>
+                  <p
+                    style="
+                      margin:0 0 30px;
+                      color:#94a3b8;
+                      font-size:14px;
+                    "
+                  >
+                    Secure TON Wallet • AI Powered
+                  </p>
 
-            <p>
-              Si vous n'avez pas demandé cette modification,
-              ignorez cet e-mail.
-            </p>
-          </div>
+                  <h2
+                    style="
+                      color:#ffffff;
+                      margin:0 0 15px;
+                    "
+                  >
+                    Désactivation de la 2FA
+                  </h2>
+
+                  <p
+                    style="
+                      color:#cbd5e1;
+                      font-size:15px;
+                      line-height:1.6;
+                    "
+                  >
+                    Vous avez demandé la désactivation de
+                    l'authentification à deux facteurs.
+                  </p>
+
+                  <p
+                    style="
+                      color:#cbd5e1;
+                      font-size:15px;
+                      line-height:1.6;
+                    "
+                  >
+                    Votre code de confirmation est :
+                  </p>
+
+                  <div
+                    style="
+                      margin:30px 0;
+                      padding:20px;
+                      background:#050B18;
+                      border:1px solid #0891b2;
+                      border-radius:16px;
+                    "
+                  >
+                    <span
+                      style="
+                        color:#22d3ee;
+                        font-size:40px;
+                        font-weight:bold;
+                        letter-spacing:8px;
+                      "
+                    >
+                      ${verificationCode}
+                    </span>
+                  </div>
+
+                  <p
+                    style="
+                      color:#94a3b8;
+                      font-size:13px;
+                    "
+                  >
+                    Ce code expire dans 10 minutes.
+                  </p>
+
+                  <p
+                    style="
+                      margin-top:25px;
+                      color:#64748b;
+                      font-size:12px;
+                    "
+                  >
+                    Si vous n'avez pas demandé cette modification,
+                    ignorez cet e-mail.
+                  </p>
+                </div>
+
+                <p
+                  style="
+                    margin-top:20px;
+                    text-align:center;
+                    color:#475569;
+                    font-size:12px;
+                  "
+                >
+                  © 2026 AI TONKEEPER
+                </p>
+              </div>
+            </body>
+          </html>
         `,
       });
+
+      if (emailResult.error) {
+        console.error(
+          "2FA DISABLE RESEND ERROR:",
+          emailResult.error
+        );
+
+        await prisma.user.update({
+          where: {
+            id: userId,
+          },
+          data: {
+            verificationCode: null,
+            verificationSent: null,
+          },
+        });
+
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "Impossible d'envoyer le code par e-mail.",
+          },
+          { status: 500 }
+        );
+      }
 
       await prisma.securityLog.create({
         data: {
@@ -281,9 +567,12 @@ export async function POST(request: NextRequest) {
     }
 
     /*
+     * ============================================================
      * VERIFY DISABLE
      * Vérifie le code puis désactive réellement la 2FA.
+     * ============================================================
      */
+
     if (action === "verify-disable") {
       if (!code) {
         return NextResponse.json(
@@ -299,8 +588,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           {
             success: false,
-            message:
-              "Aucun code de vérification actif.",
+            message: "Aucun code de vérification actif.",
           },
           { status: 400 }
         );
@@ -362,9 +650,12 @@ export async function POST(request: NextRequest) {
     }
 
     /*
+     * ============================================================
      * STATUS
      * Permet à l'interface de connaître l'état actuel.
+     * ============================================================
      */
+
     if (action === "status") {
       return NextResponse.json({
         success: true,

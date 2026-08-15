@@ -3,7 +3,7 @@ import crypto from "crypto";
 
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
-import { resend } from "@/lib/resend";
+import { getResend } from "@/lib/resend";
 
 const CODE_EXPIRATION_MS = 10 * 60 * 1000;
 
@@ -37,7 +37,9 @@ function isCodeExpired(date: Date | null): boolean {
     return true;
   }
 
-  return Date.now() - date.getTime() > CODE_EXPIRATION_MS;
+  const age = Date.now() - date.getTime();
+
+  return age < 0 || age > CODE_EXPIRATION_MS;
 }
 
 export async function POST(request: NextRequest) {
@@ -68,15 +70,11 @@ export async function POST(request: NextRequest) {
 
     const action = String(body.action ?? "").trim();
 
-    const newEmail = String(
-      body.newEmail ?? ""
-    )
+    const newEmail = String(body.newEmail ?? "")
       .trim()
       .toLowerCase();
 
-    const code = String(
-      body.code ?? ""
-    ).trim();
+    const code = String(body.code ?? "").trim();
 
     // ============================================================
     // 3. Récupérer l'utilisateur
@@ -111,12 +109,10 @@ export async function POST(request: NextRequest) {
       getRequestInfo(request);
 
     // ============================================================
-    // ACTION 1
+    // ACTION 1 : REQUEST
     //
-    // Demander le changement d'e-mail.
-    //
-    // IMPORTANT :
-    // Le premier code est envoyé à l'ANCIEN e-mail.
+    // Vérifie la nouvelle adresse et envoie un code
+    // à l'ancienne adresse.
     // ============================================================
 
     if (action === "request") {
@@ -143,8 +139,7 @@ export async function POST(request: NextRequest) {
       }
 
       if (
-        user.email.toLowerCase() ===
-        newEmail
+        user.email.toLowerCase() === newEmail
       ) {
         return NextResponse.json(
           {
@@ -156,7 +151,6 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Vérifier que le nouveau mail n'est pas déjà utilisé.
       const existingUser =
         await prisma.user.findUnique({
           where: {
@@ -181,7 +175,6 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Générer le code pour l'ancien e-mail.
       const verificationCode =
         generateVerificationCode();
 
@@ -190,90 +183,230 @@ export async function POST(request: NextRequest) {
           id: userId,
         },
         data: {
-          emailChangePendingEmail:
-            newEmail,
-
-          emailChangeCode:
-            verificationCode,
-
-          emailChangeSent:
-            new Date(),
+          emailChangePendingEmail: newEmail,
+          emailChangeCode: verificationCode,
+          emailChangeSent: new Date(),
         },
       });
 
-      // Envoyer le code à l'ANCIEN e-mail.
-      await resend.emails.send({
-        from:
-          "AI TONKEEPER <onboarding@resend.dev>",
+      // ========================================================
+      // Envoyer le premier code à l'ancien e-mail
+      // ========================================================
 
-        to: user.email,
+      const resend = getResend();
 
-        subject:
-          "Demande de changement d'adresse e-mail",
+      const emailResult =
+        await resend.emails.send({
+          from:
+            "AI TONKEEPER <onboarding@resend.dev>",
 
-        html: `
-          <div
-            style="
-              font-family:Arial,sans-serif;
-              background:#050B18;
-              color:#ffffff;
-              padding:32px;
-            "
-          >
+          to: [user.email],
 
-            <h2>AI TONKEEPER</h2>
+          subject:
+            "Demande de changement d'adresse e-mail",
 
-            <p>
-              Une demande de changement
-              d'adresse e-mail a été effectuée
-              sur votre compte.
-            </p>
+          html: `
+            <!DOCTYPE html>
+            <html lang="fr">
+              <head>
+                <meta charset="UTF-8" />
+                <meta
+                  name="viewport"
+                  content="width=device-width, initial-scale=1.0"
+                />
+              </head>
 
-            <p>
-              Nouvelle adresse demandée :
-            </p>
+              <body
+                style="
+                  margin:0;
+                  padding:0;
+                  background:#050B18;
+                  font-family:Arial,Helvetica,sans-serif;
+                  color:#ffffff;
+                "
+              >
+                <div
+                  style="
+                    max-width:600px;
+                    margin:0 auto;
+                    padding:40px 20px;
+                  "
+                >
+                  <div
+                    style="
+                      background:#101A2C;
+                      border:1px solid #1e293b;
+                      border-radius:20px;
+                      padding:32px;
+                      text-align:center;
+                    "
+                  >
+                    <h1
+                      style="
+                        margin:0 0 10px;
+                        color:#22d3ee;
+                        font-size:28px;
+                      "
+                    >
+                      AI TONKEEPER
+                    </h1>
 
-            <p>
-              <strong>${newEmail}</strong>
-            </p>
+                    <p
+                      style="
+                        margin:0 0 30px;
+                        color:#94a3b8;
+                        font-size:14px;
+                      "
+                    >
+                      Secure TON Wallet • AI Powered
+                    </p>
 
-            <p>
-              Pour autoriser cette modification,
-              utilisez le code suivant :
-            </p>
+                    <h2
+                      style="
+                        color:#ffffff;
+                      "
+                    >
+                      Changement d'adresse e-mail
+                    </h2>
 
-            <h1
-              style="
-                font-size:40px;
-                letter-spacing:8px;
-                color:#06b6d4;
-              "
-            >
-              ${verificationCode}
-            </h1>
+                    <p
+                      style="
+                        color:#cbd5e1;
+                        font-size:15px;
+                        line-height:1.6;
+                      "
+                    >
+                      Une demande de changement
+                      d'adresse e-mail a été effectuée
+                      sur votre compte.
+                    </p>
 
-            <p>
-              Ce code expire dans 10 minutes.
-            </p>
+                    <p
+                      style="
+                        color:#cbd5e1;
+                        font-size:15px;
+                        line-height:1.6;
+                      "
+                    >
+                      Nouvelle adresse demandée :
+                    </p>
 
-            <p>
-              Si vous n'êtes pas à l'origine
-              de cette demande, ne partagez pas
-              ce code et sécurisez votre compte.
-            </p>
+                    <p
+                      style="
+                        color:#22d3ee;
+                        font-size:16px;
+                        font-weight:bold;
+                      "
+                    >
+                      ${newEmail}
+                    </p>
 
-          </div>
-        `,
-      });
+                    <p
+                      style="
+                        color:#cbd5e1;
+                        font-size:15px;
+                        line-height:1.6;
+                      "
+                    >
+                      Utilisez le code ci-dessous pour
+                      autoriser cette modification :
+                    </p>
+
+                    <div
+                      style="
+                        margin:30px 0;
+                        padding:20px;
+                        background:#050B18;
+                        border:1px solid #0891b2;
+                        border-radius:16px;
+                      "
+                    >
+                      <span
+                        style="
+                          color:#22d3ee;
+                          font-size:40px;
+                          font-weight:bold;
+                          letter-spacing:8px;
+                        "
+                      >
+                        ${verificationCode}
+                      </span>
+                    </div>
+
+                    <p
+                      style="
+                        color:#94a3b8;
+                        font-size:13px;
+                      "
+                    >
+                      Ce code expire dans 10 minutes.
+                    </p>
+
+                    <p
+                      style="
+                        margin-top:25px;
+                        color:#64748b;
+                        font-size:12px;
+                      "
+                    >
+                      Si vous n'êtes pas à l'origine
+                      de cette demande, ne partagez pas
+                      ce code et sécurisez votre compte.
+                    </p>
+                  </div>
+
+                  <p
+                    style="
+                      margin-top:20px;
+                      text-align:center;
+                      color:#475569;
+                      font-size:12px;
+                    "
+                  >
+                    © 2026 AI TONKEEPER
+                  </p>
+                </div>
+              </body>
+            </html>
+          `,
+        });
+
+      if (emailResult.error) {
+        console.error(
+          "CHANGE_EMAIL_OLD_EMAIL_RESEND_ERROR:",
+          emailResult.error
+        );
+
+        await prisma.user.update({
+          where: {
+            id: userId,
+          },
+          data: {
+            emailChangePendingEmail: null,
+            emailChangeCode: null,
+            emailChangeSent: null,
+          },
+        });
+
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "Impossible d'envoyer le code de vérification.",
+          },
+          { status: 500 }
+        );
+      }
 
       await prisma.securityLog.create({
         data: {
           userId,
+
           action:
             "EMAIL_CHANGE_OLD_EMAIL_CODE_SENT",
 
           description:
-            "Un code de vérification a été envoyé à l'ancienne adresse e-mail pour autoriser une demande de changement d'adresse.",
+            "Un code de vérification a été envoyé à l'ancienne adresse e-mail pour autoriser le changement d'adresse.",
 
           ipAddress,
           userAgent,
@@ -283,8 +416,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
 
-        requiresOldEmailVerification:
-          true,
+        requiresOldEmailVerification: true,
 
         message:
           "Un code de vérification a été envoyé à votre ancienne adresse e-mail.",
@@ -292,20 +424,19 @@ export async function POST(request: NextRequest) {
     }
 
     // ============================================================
-    // ACTION 2
+    // ACTION 2 : VERIFY OLD
     //
-    // Vérifier le code envoyé à l'ancien e-mail.
-    //
-    // AUCUN changement d'adresse n'est effectué ici.
+    // Vérifie le code reçu sur l'ancienne adresse.
+    // Aucun changement d'e-mail n'est encore effectué.
     // ============================================================
 
     if (action === "verify-old") {
-      if (!code) {
+      if (!/^\d{6}$/.test(code)) {
         return NextResponse.json(
           {
             success: false,
             message:
-              "Code de vérification requis.",
+              "Le code de vérification doit contenir 6 chiffres.",
           },
           { status: 400 }
         );
@@ -358,11 +489,12 @@ export async function POST(request: NextRequest) {
         await prisma.securityLog.create({
           data: {
             userId,
+
             action:
               "EMAIL_CHANGE_OLD_EMAIL_CODE_FAILED",
 
             description:
-              "Tentative avec un code incorrect pour autoriser un changement d'adresse e-mail.",
+              "Tentative avec un code incorrect pour autoriser le changement d'adresse e-mail.",
 
             ipAddress,
             userAgent,
@@ -379,14 +511,6 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // ========================================================
-      // Le propriétaire de l'ancien e-mail est maintenant
-      // authentifié pour cette demande.
-      //
-      // On génère maintenant un NOUVEAU code pour le
-      // NOUVEL e-mail.
-      // ========================================================
-
       const pendingEmail =
         user.emailChangePendingEmail;
 
@@ -398,77 +522,193 @@ export async function POST(request: NextRequest) {
           id: userId,
         },
         data: {
-          emailChangeCode:
-            newEmailCode,
-
-          emailChangeSent:
-            new Date(),
+          emailChangeCode: newEmailCode,
+          emailChangeSent: new Date(),
         },
       });
 
-      // Envoyer maintenant le second code au NOUVEL e-mail.
-      await resend.emails.send({
-        from:
-          "AI TONKEEPER <onboarding@resend.dev>",
+      // ========================================================
+      // Envoyer le second code à la nouvelle adresse
+      // ========================================================
 
-        to: pendingEmail,
+      const resend = getResend();
 
-        subject:
-          "Confirmez votre nouvelle adresse e-mail",
+      const emailResult =
+        await resend.emails.send({
+          from:
+            "AI TONKEEPER <onboarding@resend.dev>",
 
-        html: `
-          <div
-            style="
-              font-family:Arial,sans-serif;
-              background:#050B18;
-              color:#ffffff;
-              padding:32px;
-            "
-          >
+          to: [pendingEmail],
 
-            <h2>AI TONKEEPER</h2>
+          subject:
+            "Confirmez votre nouvelle adresse e-mail",
 
-            <p>
-              Votre ancienne adresse e-mail
-              a été vérifiée avec succès.
-            </p>
+          html: `
+            <!DOCTYPE html>
+            <html lang="fr">
+              <head>
+                <meta charset="UTF-8" />
+                <meta
+                  name="viewport"
+                  content="width=device-width, initial-scale=1.0"
+                />
+              </head>
 
-            <p>
-              Pour terminer le changement,
-              confirmez que vous avez accès
-              à cette nouvelle adresse.
-            </p>
+              <body
+                style="
+                  margin:0;
+                  padding:0;
+                  background:#050B18;
+                  font-family:Arial,Helvetica,sans-serif;
+                  color:#ffffff;
+                "
+              >
+                <div
+                  style="
+                    max-width:600px;
+                    margin:0 auto;
+                    padding:40px 20px;
+                  "
+                >
+                  <div
+                    style="
+                      background:#101A2C;
+                      border:1px solid #1e293b;
+                      border-radius:20px;
+                      padding:32px;
+                      text-align:center;
+                    "
+                  >
+                    <h1
+                      style="
+                        margin:0 0 10px;
+                        color:#22d3ee;
+                        font-size:28px;
+                      "
+                    >
+                      AI TONKEEPER
+                    </h1>
 
-            <p>
-              Votre code de confirmation :
-            </p>
+                    <p
+                      style="
+                        margin:0 0 30px;
+                        color:#94a3b8;
+                        font-size:14px;
+                      "
+                    >
+                      Secure TON Wallet • AI Powered
+                    </p>
 
-            <h1
-              style="
-                font-size:40px;
-                letter-spacing:8px;
-                color:#06b6d4;
-              "
-            >
-              ${newEmailCode}
-            </h1>
+                    <h2>
+                      Confirmez votre nouvelle adresse
+                    </h2>
 
-            <p>
-              Ce code expire dans 10 minutes.
-            </p>
+                    <p
+                      style="
+                        color:#cbd5e1;
+                        font-size:15px;
+                        line-height:1.6;
+                      "
+                    >
+                      Votre ancienne adresse e-mail
+                      a été vérifiée avec succès.
+                    </p>
 
-          </div>
-        `,
-      });
+                    <p
+                      style="
+                        color:#cbd5e1;
+                        font-size:15px;
+                        line-height:1.6;
+                      "
+                    >
+                      Utilisez le code ci-dessous pour
+                      confirmer que vous avez accès à
+                      cette nouvelle adresse.
+                    </p>
+
+                    <div
+                      style="
+                        margin:30px 0;
+                        padding:20px;
+                        background:#050B18;
+                        border:1px solid #0891b2;
+                        border-radius:16px;
+                      "
+                    >
+                      <span
+                        style="
+                          color:#22d3ee;
+                          font-size:40px;
+                          font-weight:bold;
+                          letter-spacing:8px;
+                        "
+                      >
+                        ${newEmailCode}
+                      </span>
+                    </div>
+
+                    <p
+                      style="
+                        color:#94a3b8;
+                        font-size:13px;
+                      "
+                    >
+                      Ce code expire dans 10 minutes.
+                    </p>
+                  </div>
+
+                  <p
+                    style="
+                      margin-top:20px;
+                      text-align:center;
+                      color:#475569;
+                      font-size:12px;
+                    "
+                  >
+                    © 2026 AI TONKEEPER
+                  </p>
+                </div>
+              </body>
+            </html>
+          `,
+        });
+
+      if (emailResult.error) {
+        console.error(
+          "CHANGE_EMAIL_NEW_EMAIL_RESEND_ERROR:",
+          emailResult.error
+        );
+
+        await prisma.user.update({
+          where: {
+            id: userId,
+          },
+          data: {
+            emailChangePendingEmail: null,
+            emailChangeCode: null,
+            emailChangeSent: null,
+          },
+        });
+
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "Impossible d'envoyer le code à la nouvelle adresse e-mail.",
+          },
+          { status: 500 }
+        );
+      }
 
       await prisma.securityLog.create({
         data: {
           userId,
+
           action:
             "EMAIL_CHANGE_NEW_EMAIL_CODE_SENT",
 
           description:
-            "L'ancienne adresse a été vérifiée. Un second code a été envoyé à la nouvelle adresse e-mail.",
+            "L'ancienne adresse e-mail a été vérifiée. Un second code a été envoyé à la nouvelle adresse.",
 
           ipAddress,
           userAgent,
@@ -478,8 +718,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
 
-        requiresNewEmailVerification:
-          true,
+        requiresNewEmailVerification: true,
 
         message:
           "Votre ancienne adresse a été vérifiée. Un code a été envoyé à la nouvelle adresse e-mail.",
@@ -487,20 +726,18 @@ export async function POST(request: NextRequest) {
     }
 
     // ============================================================
-    // ACTION 3
+    // ACTION 3 : VERIFY NEW
     //
-    // Vérifier le code du NOUVEL e-mail.
-    //
-    // C'est seulement ici que l'adresse est réellement modifiée.
+    // C'est uniquement ici que le changement devient définitif.
     // ============================================================
 
     if (action === "verify-new") {
-      if (!code) {
+      if (!/^\d{6}$/.test(code)) {
         return NextResponse.json(
           {
             success: false,
             message:
-              "Code de vérification requis.",
+              "Le code de vérification doit contenir 6 chiffres.",
           },
           { status: 400 }
         );
@@ -553,6 +790,7 @@ export async function POST(request: NextRequest) {
         await prisma.securityLog.create({
           data: {
             userId,
+
             action:
               "EMAIL_CHANGE_NEW_EMAIL_CODE_FAILED",
 
@@ -574,14 +812,14 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      const newEmail =
+      const finalEmail =
         user.emailChangePendingEmail;
 
       // Dernière vérification d'unicité.
       const existingUser =
         await prisma.user.findUnique({
           where: {
-            email: newEmail,
+            email: finalEmail,
           },
           select: {
             id: true,
@@ -614,7 +852,7 @@ export async function POST(request: NextRequest) {
       }
 
       // ========================================================
-      // CHANGEMENT DÉFINITIF
+      // Changement définitif
       // ========================================================
 
       await prisma.$transaction([
@@ -622,20 +860,15 @@ export async function POST(request: NextRequest) {
           where: {
             id: userId,
           },
-
           data: {
-            email: newEmail,
+            email: finalEmail,
 
+            // La nouvelle adresse vient d'être vérifiée.
             emailVerified: true,
 
-            emailChangePendingEmail:
-              null,
-
-            emailChangeCode:
-              null,
-
-            emailChangeSent:
-              null,
+            emailChangePendingEmail: null,
+            emailChangeCode: null,
+            emailChangeSent: null,
           },
         }),
 
@@ -664,7 +897,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ============================================================
-    // Action inconnue
+    // ACTION INVALIDE
     // ============================================================
 
     return NextResponse.json(
@@ -674,9 +907,9 @@ export async function POST(request: NextRequest) {
       },
       { status: 400 }
     );
-  } catch (error) {
+  } catch (error: unknown) {
     console.error(
-      "CHANGE_EMAIL_ERROR:",
+      "CHANGE_EMAIL_VERIFY_ERROR:",
       error
     );
 

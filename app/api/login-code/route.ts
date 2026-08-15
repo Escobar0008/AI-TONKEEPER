@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
-import { resend } from "@/lib/resend";
+import { getResend } from "@/lib/resend";
 
 export async function POST(request: NextRequest) {
   try {
@@ -55,6 +55,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // ============================================================
+    // VÉRIFICATION DU MOT DE PASSE
+    // ============================================================
+
     if (!resendCode) {
       if (!password) {
         return NextResponse.json(
@@ -81,21 +85,36 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      // ============================================================
+      // VÉRIFICATION EMAIL
+      // ============================================================
+
       if (!user.emailVerified) {
         return NextResponse.json(
           {
             success: false,
+            requiresEmailVerification: true,
             message:
               "Veuillez vérifier votre adresse e-mail avant de vous connecter.",
           },
-          { status: 401 }
+          { status: 403 }
         );
       }
     }
 
+    // ============================================================
+    // GÉNÉRER LE CODE
+    // ============================================================
+
     const loginCode = Math.floor(
       100000 + Math.random() * 900000
     ).toString();
+
+    const verificationSent = new Date();
+
+    // ============================================================
+    // SAUVEGARDER LE CODE
+    // ============================================================
 
     await prisma.user.update({
       where: {
@@ -103,17 +122,29 @@ export async function POST(request: NextRequest) {
       },
       data: {
         verificationCode: loginCode,
-        verificationSent: new Date(),
+        verificationSent,
       },
     });
+
+    // ============================================================
+    // INITIALISER RESEND
+    // ============================================================
+
+    const resend = getResend();
+
+    // ============================================================
+    // ENVOYER L'EMAIL
+    // ============================================================
 
     const emailResult = await resend.emails.send({
       from: "AI TONKEEPER <onboarding@resend.dev>",
       to: [email],
       subject: "Votre code de connexion AI TONKEEPER",
+
       html: `
         <!DOCTYPE html>
         <html lang="fr">
+
           <body style="
             margin:0;
             padding:0;
@@ -121,11 +152,13 @@ export async function POST(request: NextRequest) {
             font-family:Arial,Helvetica,sans-serif;
             color:#ffffff;
           ">
+
             <div style="
               max-width:600px;
               margin:0 auto;
               padding:40px 20px;
             ">
+
               <div style="
                 background:#101A2C;
                 border:1px solid #1e293b;
@@ -133,6 +166,7 @@ export async function POST(request: NextRequest) {
                 padding:32px;
                 text-align:center;
               ">
+
                 <h1 style="
                   margin:0 0 10px;
                   color:#22d3ee;
@@ -149,7 +183,9 @@ export async function POST(request: NextRequest) {
                   Secure TON Wallet • AI Powered
                 </p>
 
-                <h2 style="color:#ffffff;">
+                <h2 style="
+                  color:#ffffff;
+                ">
                   Code de connexion
                 </h2>
 
@@ -169,6 +205,7 @@ export async function POST(request: NextRequest) {
                   border:1px solid #0891b2;
                   border-radius:16px;
                 ">
+
                   <span style="
                     color:#22d3ee;
                     font-size:40px;
@@ -177,6 +214,7 @@ export async function POST(request: NextRequest) {
                   ">
                     ${loginCode}
                   </span>
+
                 </div>
 
                 <p style="
@@ -196,6 +234,7 @@ export async function POST(request: NextRequest) {
                   tentative de connexion, vous pouvez ignorer
                   cet e-mail.
                 </p>
+
               </div>
 
               <p style="
@@ -206,42 +245,81 @@ export async function POST(request: NextRequest) {
               ">
                 © 2026 AI TONKEEPER
               </p>
+
             </div>
+
           </body>
+
         </html>
       `,
     });
 
+    // ============================================================
+    // VÉRIFIER L'ENVOI
+    // ============================================================
+
     if (emailResult.error) {
-      console.error("Resend error:", emailResult.error);
+      console.error(
+        "LOGIN CODE RESEND ERROR:",
+        emailResult.error
+      );
+
+      // Supprimer le code s'il n'a pas été envoyé.
+
+      await prisma.user.update({
+        where: {
+          id: user.id,
+        },
+        data: {
+          verificationCode: null,
+          verificationSent: null,
+        },
+      });
 
       return NextResponse.json(
         {
           success: false,
-          message: "Impossible d'envoyer le code par e-mail.",
+          message:
+            "Impossible d'envoyer le code par e-mail.",
         },
         { status: 500 }
       );
     }
 
+    // ============================================================
+    // SUCCÈS
+    // ============================================================
+
     return NextResponse.json(
       {
         success: true,
+        requiresLoginVerification: true,
         message: resendCode
           ? "Code renvoyé avec succès."
           : "Code envoyé avec succès.",
       },
       { status: 200 }
     );
+
   } catch (error: unknown) {
-    console.error("========== LOGIN CODE ERROR ==========");
+
+    console.error(
+      "========== LOGIN CODE ERROR =========="
+    );
+
     console.error(error);
-    console.error("======================================");
+
+    console.error(
+      "======================================"
+    );
 
     return NextResponse.json(
       {
         success: false,
-        message: "Une erreur serveur est survenue.",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Une erreur serveur est survenue.",
       },
       { status: 500 }
     );

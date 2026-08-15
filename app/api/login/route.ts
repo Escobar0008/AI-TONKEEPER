@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
-import { resend } from "@/lib/resend";
+import { getResend } from "@/lib/resend";
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,7 +19,10 @@ export async function POST(request: NextRequest) {
 
     const resendCode = body.resend === true;
 
-    // Vérification de l'email
+    // ============================================================
+    // 1. VÉRIFICATION DE L'EMAIL
+    // ============================================================
+
     if (!email) {
       return NextResponse.json(
         {
@@ -30,7 +33,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Recherche de l'utilisateur
+    // ============================================================
+    // 2. RECHERCHE DE L'UTILISATEUR
+    // ============================================================
+
     const user = await prisma.user.findUnique({
       where: {
         email,
@@ -47,7 +53,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Vérification du compte
+    // ============================================================
+    // 3. VÉRIFICATION DU COMPTE
+    // ============================================================
+
     if (user.accountLocked) {
       return NextResponse.json(
         {
@@ -59,14 +68,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    /*
-     * Lors d'une connexion normale :
-     * 1. Vérification du mot de passe
-     * 2. Vérification de l'adresse e-mail
-     *
-     * Lors d'un renvoi de code :
-     * on ne redemande pas le mot de passe.
-     */
+    // ============================================================
+    // 4. CONNEXION NORMALE
+    // ============================================================
+
     if (!resendCode) {
       if (!password) {
         return NextResponse.json(
@@ -94,55 +99,77 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      // ==========================================================
+      // 5. VÉRIFICATION DE L'ADRESSE EMAIL
+      // ==========================================================
+
       if (!user.emailVerified) {
         return NextResponse.json(
           {
             success: false,
+            requiresEmailVerification: true,
             message:
               "Veuillez vérifier votre adresse e-mail avant de vous connecter.",
           },
-          { status: 401 }
+          { status: 403 }
         );
       }
     }
 
-    /*
-     * Génération du code de connexion.
-     */
+    // ============================================================
+    // 6. GÉNÉRER LE CODE DE CONNEXION
+    // ============================================================
+
     const loginCode = Math.floor(
       100000 + Math.random() * 900000
     ).toString();
 
-    /*
-     * Sauvegarde du code dans User.
-     */
+    const verificationSent = new Date();
+
+    // ============================================================
+    // 7. SAUVEGARDER LE CODE
+    // ============================================================
+
     await prisma.user.update({
       where: {
         id: user.id,
       },
       data: {
         verificationCode: loginCode,
-        verificationSent: new Date(),
+        verificationSent,
       },
     });
 
-    /*
-     * Envoi du code avec Resend.
-     */
+    // ============================================================
+    // 8. INITIALISER RESEND
+    // ============================================================
+
+    const resend = getResend();
+
+    // ============================================================
+    // 9. ENVOYER LE CODE PAR EMAIL
+    // ============================================================
+
     const emailResult = await resend.emails.send({
       from: "AI TONKEEPER <onboarding@resend.dev>",
+
       to: [email],
+
       subject:
         "Votre code de connexion AI TONKEEPER",
+
       html: `
         <!DOCTYPE html>
         <html lang="fr">
+
           <head>
             <meta charset="UTF-8" />
+
             <meta
               name="viewport"
               content="width=device-width, initial-scale=1.0"
             />
+
             <title>
               Code de connexion AI TONKEEPER
             </title>
@@ -157,6 +184,7 @@ export async function POST(request: NextRequest) {
               color:#ffffff;
             "
           >
+
             <div
               style="
                 max-width:600px;
@@ -164,6 +192,7 @@ export async function POST(request: NextRequest) {
                 padding:40px 20px;
               "
             >
+
               <div
                 style="
                   background:#101A2C;
@@ -173,6 +202,7 @@ export async function POST(request: NextRequest) {
                   text-align:center;
                 "
               >
+
                 <h1
                   style="
                     margin:0 0 10px;
@@ -223,6 +253,7 @@ export async function POST(request: NextRequest) {
                     border-radius:16px;
                   "
                 >
+
                   <span
                     style="
                       color:#22d3ee;
@@ -233,6 +264,7 @@ export async function POST(request: NextRequest) {
                   >
                     ${loginCode}
                   </span>
+
                 </div>
 
                 <p
@@ -257,6 +289,7 @@ export async function POST(request: NextRequest) {
                   de cette tentative de connexion,
                   vous pouvez ignorer cet e-mail.
                 </p>
+
               </div>
 
               <p
@@ -269,20 +302,36 @@ export async function POST(request: NextRequest) {
               >
                 © 2026 AI TONKEEPER
               </p>
+
             </div>
+
           </body>
+
         </html>
       `,
     });
 
-    /*
-     * Vérification de la réponse Resend.
-     */
+    // ============================================================
+    // 10. VÉRIFIER L'ENVOI RESEND
+    // ============================================================
+
     if (emailResult.error) {
       console.error(
-        "RESEND ERROR:",
+        "RESEND LOGIN ERROR:",
         emailResult.error
       );
+
+      // Supprimer le code s'il n'a pas été envoyé.
+
+      await prisma.user.update({
+        where: {
+          id: user.id,
+        },
+        data: {
+          verificationCode: null,
+          verificationSent: null,
+        },
+      });
 
       return NextResponse.json(
         {
@@ -294,29 +343,40 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // ============================================================
+    // 11. SUCCÈS
+    // ============================================================
+
     return NextResponse.json(
       {
         success: true,
+        requiresLoginVerification: true,
         message: resendCode
           ? "Code renvoyé avec succès."
           : "Code envoyé avec succès.",
       },
       { status: 200 }
     );
+
   } catch (error: unknown) {
+
     console.error(
-      "========== LOGIN CODE ERROR =========="
+      "========== LOGIN ERROR =========="
     );
+
     console.error(error);
+
     console.error(
-      "======================================"
+      "================================="
     );
 
     return NextResponse.json(
       {
         success: false,
         message:
-          "Une erreur serveur est survenue.",
+          error instanceof Error
+            ? error.message
+            : "Une erreur serveur est survenue.",
       },
       { status: 500 }
     );
