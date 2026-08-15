@@ -13,21 +13,20 @@ import { executeAITrade } from "./executor";
 | AI TONKEEPER — AI TRADING RUNNER
 |--------------------------------------------------------------------------
 |
-| AI Trading réel :
+| MODE ACTUEL :
+|
+| - Prix réels : CoinGecko via /api/crypto
+| - Analyse : engine.ts
+| - Trading : simulation interne uniquement
+| - Base de données : Prisma
+| - Aucun exchange externe
+| - Aucun ordre réel
+|
+| Actifs AI :
 |
 | BTC/USDT
 | ETH/USDT
 | BNB/USDT
-|
-| TON :
-| - supporté par AI TONKEEPER
-| - peut exister dans les balances
-| - n'est PAS exécuté par le moteur Bybit AI Trading
-|
-| USDT :
-| - monnaie de cotation
-| - utilisée pour les BUY
-| - n'est pas un actif AI tradé seul
 |
 |--------------------------------------------------------------------------
 */
@@ -38,19 +37,18 @@ const SUPPORTED_COINS: Coin[] = [
   "BNB",
 ];
 
-type BybitTicker = {
-  symbol: string;
-  lastPrice: string;
-  price24hPcnt?: string;
-};
+/*
+|--------------------------------------------------------------------------
+| TYPES
+|--------------------------------------------------------------------------
+*/
 
-type BybitTickerResponse = {
-  retCode: number;
-  retMsg: string;
-  result?: {
-    category?: string;
-    list?: BybitTicker[];
-  };
+type CryptoApiResponse = {
+  success?: boolean;
+  coin?: string;
+  price?: number | string;
+  change24h?: number | string;
+  message?: string;
 };
 
 type RunnerResult = {
@@ -85,167 +83,162 @@ type RunnerResult = {
 
 /*
 |--------------------------------------------------------------------------
-| BYBIT BASE URL
+| API BASE URL
+|--------------------------------------------------------------------------
+|
+| Le runner s'exécute côté serveur.
+|
+| On utilise :
+|
+| NEXTAUTH_URL
+| puis APP_URL
+| puis localhost en développement.
+|
 |--------------------------------------------------------------------------
 */
 
-function getBybitBaseUrl(): string {
-  return (
-    process.env.BYBIT_BASE_URL ||
-    "https://api.bybit.com"
-  );
-}
+function getAppBaseUrl(): string {
+  const configuredUrl =
+    process.env.NEXTAUTH_URL ||
+    process.env.APP_URL;
 
-/*
-|--------------------------------------------------------------------------
-| BYBIT SYMBOL
-|--------------------------------------------------------------------------
-*/
-
-function getBybitSymbol(
-  coin: Coin
-): string | null {
-  switch (coin) {
-    case "BTC":
-      return "BTCUSDT";
-
-    case "ETH":
-      return "ETHUSDT";
-
-    case "BNB":
-      return "BNBUSDT";
-
-    default:
-      return null;
+  if (configuredUrl) {
+    return configuredUrl.replace(
+      /\/$/,
+      ""
+    );
   }
+
+  return "http://localhost:3000";
 }
 
 /*
 |--------------------------------------------------------------------------
-| GET BYBIT MARKET SNAPSHOT
+| GET MARKET SNAPSHOTS
 |--------------------------------------------------------------------------
 |
-| Une seule requête Bybit pour récupérer les trois actifs.
+| Source des prix :
 |
+| /api/crypto
+|
+| Cette API utilise CoinGecko.
+|
+| Le runner ne contacte donc aucun exchange.
+|
+|--------------------------------------------------------------------------
 */
 
 async function getMarketSnapshots(): Promise<
   Partial<Record<Coin, MarketSnapshot>>
 > {
+  const snapshots: Partial<
+    Record<Coin, MarketSnapshot>
+  > = {};
+
   try {
     const baseUrl =
-      getBybitBaseUrl();
+      getAppBaseUrl();
 
-    const response =
-      await fetch(
-        `${baseUrl}/v5/market/tickers?category=spot`,
-        {
-          method: "GET",
+    /*
+    |--------------------------------------------------------------------------
+    | RÉCUPÉRATION DES PRIX
+    |--------------------------------------------------------------------------
+    |
+    | Chaque coin est récupéré depuis notre API interne.
+    |
+    | L'API /api/crypto est elle-même connectée à CoinGecko.
+    |
+    |--------------------------------------------------------------------------
+    */
 
-          cache: "no-store",
+    await Promise.all(
+      SUPPORTED_COINS.map(
+        async (coin) => {
+          try {
+            const response =
+              await fetch(
+                `${baseUrl}/api/crypto?coin=${encodeURIComponent(
+                  coin
+                )}`,
+                {
+                  method: "GET",
+                  cache: "no-store",
+                  headers: {
+                    Accept:
+                      "application/json",
+                  },
+                }
+              );
 
-          headers: {
-            Accept:
-              "application/json",
-          },
+            if (!response.ok) {
+              console.error(
+                `AI RUNNER: market API returned HTTP ${response.status} for ${coin}.`
+              );
+
+              return;
+            }
+
+            const data =
+              (await response.json()) as CryptoApiResponse;
+
+            if (!data.success) {
+              console.error(
+                `AI RUNNER: market API failed for ${coin}:`,
+                data.message
+              );
+
+              return;
+            }
+
+            const price =
+              Number(
+                data.price ?? 0
+              );
+
+            const change24h =
+              Number(
+                data.change24h ?? 0
+              );
+
+            if (
+              !Number.isFinite(
+                price
+              ) ||
+              price <= 0
+            ) {
+              console.error(
+                `AI RUNNER: invalid market price for ${coin}.`
+              );
+
+              return;
+            }
+
+            snapshots[coin] = {
+              coin,
+
+              price,
+
+              change24h:
+                Number.isFinite(
+                  change24h
+                )
+                  ? change24h
+                  : 0,
+            };
+          } catch (error) {
+            console.error(
+              `AI RUNNER MARKET ERROR (${coin}):`,
+              error
+            );
+          }
         }
-      );
-
-    if (!response.ok) {
-      console.error(
-        `AI RUNNER: Bybit returned HTTP ${response.status}.`
-      );
-
-      return {};
-    }
-
-    const data =
-      (await response.json()) as BybitTickerResponse;
-
-    if (
-      data.retCode !== 0
-    ) {
-      console.error(
-        "AI RUNNER: Bybit market error:",
-        data.retCode,
-        data.retMsg
-      );
-
-      return {};
-    }
-
-    const list =
-      data.result?.list ?? [];
-
-    const snapshots: Partial<
-      Record<Coin, MarketSnapshot>
-    > = {};
-
-    for (const coin of SUPPORTED_COINS) {
-      const symbol =
-        getBybitSymbol(coin);
-
-      if (!symbol) {
-        continue;
-      }
-
-      const ticker =
-        list.find(
-          (item) =>
-            item.symbol ===
-            symbol
-        );
-
-      if (!ticker) {
-        continue;
-      }
-
-      const price =
-        Number(
-          ticker.lastPrice
-        );
-
-      /*
-      |--------------------------------------------------------------------------
-      | Bybit price24hPcnt
-      |--------------------------------------------------------------------------
-      |
-      | Exemple :
-      | "0.0125" = +1.25%
-      |
-      */
-
-      const change24h =
-        Number(
-          ticker.price24hPcnt ??
-            0
-        ) * 100;
-
-      if (
-        !Number.isFinite(price) ||
-        price <= 0
-      ) {
-        continue;
-      }
-
-      snapshots[coin] = {
-        coin,
-
-        price,
-
-        change24h:
-          Number.isFinite(
-            change24h
-          )
-            ? change24h
-            : 0,
-      };
-    }
+      )
+    );
 
     return snapshots;
   } catch (error) {
     console.error(
-      "AI RUNNER MARKET ERROR:",
+      "AI RUNNER MARKET SNAPSHOT ERROR:",
       error
     );
 
@@ -258,9 +251,10 @@ async function getMarketSnapshots(): Promise<
 | CHECK OPEN TRADE
 |--------------------------------------------------------------------------
 |
-| Empêche plusieurs positions ouvertes
-| sur le même utilisateur / même coin.
+| Empêche plusieurs positions simulées ouvertes
+| pour le même utilisateur et le même coin.
 |
+|--------------------------------------------------------------------------
 */
 
 async function hasOpenTrade(
@@ -271,9 +265,7 @@ async function hasOpenTrade(
     await prisma.aITrade.findFirst({
       where: {
         userId,
-
         coin,
-
         status: "OPEN",
       },
 
@@ -355,6 +347,11 @@ async function isDailyLossProtectionTriggered(
 |--------------------------------------------------------------------------
 | CALCULATE TRADE AMOUNT
 |--------------------------------------------------------------------------
+|
+| L'allocation est calculée à partir du solde
+| interne du client.
+|
+|--------------------------------------------------------------------------
 */
 
 function calculateTradeAmount(
@@ -390,8 +387,7 @@ function calculateTradeAmount(
 
   const amount =
     availableBalance *
-    (safeAllocation /
-      100);
+    (safeAllocation / 100);
 
   if (
     !Number.isFinite(
@@ -408,6 +404,18 @@ function calculateTradeAmount(
 /*
 |--------------------------------------------------------------------------
 | RUN AI TRADING CYCLE
+|--------------------------------------------------------------------------
+|
+| Cycle complet :
+|
+| 1. utilisateurs AI actifs
+| 2. prix CoinGecko
+| 3. protections
+| 4. moteur AI
+| 5. solde interne
+| 6. allocation
+| 7. simulation du trade
+|
 |--------------------------------------------------------------------------
 */
 
@@ -466,16 +474,14 @@ export async function runAITradingCycle(): Promise<RunnerResult> {
 
     /*
     |--------------------------------------------------------------------------
-    | GET MARKET DATA ONCE
+    | GET REAL MARKET DATA
     |--------------------------------------------------------------------------
     |
-    | IMPORTANT :
+    | Une seule phase de récupération pour le cycle.
     |
-    | On ne fait PAS une requête /api/crypto par coin
-    | et par utilisateur.
+    | Source : CoinGecko via /api/crypto.
     |
-    | Une seule requête Bybit alimente tout le cycle.
-    |
+    |--------------------------------------------------------------------------
     */
 
     const marketSnapshots =
@@ -510,11 +516,14 @@ export async function runAITradingCycle(): Promise<RunnerResult> {
           result.skipped++;
 
           result.results.push({
-            userId: user.id,
+            userId:
+              user.id,
 
             coin,
 
             executed: false,
+
+            simulated: true,
 
             message:
               "AI Trading emergency stop is enabled.",
@@ -537,7 +546,6 @@ export async function runAITradingCycle(): Promise<RunnerResult> {
         dailyLossTriggered =
           await isDailyLossProtectionTriggered(
             user.id,
-
             settings.dailyLossProtection
           );
       } catch (error) {
@@ -560,11 +568,14 @@ export async function runAITradingCycle(): Promise<RunnerResult> {
           result.skipped++;
 
           result.results.push({
-            userId: user.id,
+            userId:
+              user.id,
 
             coin,
 
             executed: false,
+
+            simulated: true,
 
             message:
               "Daily loss protection blocked AI trading for today.",
@@ -576,7 +587,7 @@ export async function runAITradingCycle(): Promise<RunnerResult> {
 
       /*
       |--------------------------------------------------------------------------
-      | PROCESS BTC / ETH / BNB
+      | PROCESS EACH COIN
       |--------------------------------------------------------------------------
       */
 
@@ -598,11 +609,14 @@ export async function runAITradingCycle(): Promise<RunnerResult> {
           result.errors++;
 
           result.results.push({
-            userId: user.id,
+            userId:
+              user.id,
 
             coin,
 
             executed: false,
+
+            simulated: true,
 
             message:
               `Market data unavailable for ${coin}.`,
@@ -624,7 +638,6 @@ export async function runAITradingCycle(): Promise<RunnerResult> {
           openTrade =
             await hasOpenTrade(
               user.id,
-
               coin
             );
         } catch (error) {
@@ -636,11 +649,14 @@ export async function runAITradingCycle(): Promise<RunnerResult> {
           result.errors++;
 
           result.results.push({
-            userId: user.id,
+            userId:
+              user.id,
 
             coin,
 
             executed: false,
+
+            simulated: true,
 
             message:
               "Unable to verify existing AI trade.",
@@ -653,14 +669,17 @@ export async function runAITradingCycle(): Promise<RunnerResult> {
           result.skipped++;
 
           result.results.push({
-            userId: user.id,
+            userId:
+              user.id,
 
             coin,
 
             executed: false,
 
+            simulated: true,
+
             message:
-              "An AI trade is already open for this asset.",
+              "An AI simulation is already open for this asset.",
           });
 
           continue;
@@ -678,7 +697,6 @@ export async function runAITradingCycle(): Promise<RunnerResult> {
           engineResult =
             await runAITradingEngine(
               user.id,
-
               market
             );
         } catch (error) {
@@ -690,11 +708,14 @@ export async function runAITradingCycle(): Promise<RunnerResult> {
           result.errors++;
 
           result.results.push({
-            userId: user.id,
+            userId:
+              user.id,
 
             coin,
 
             executed: false,
+
+            simulated: true,
 
             message:
               "AI engine failed.",
@@ -703,6 +724,12 @@ export async function runAITradingCycle(): Promise<RunnerResult> {
           continue;
         }
 
+        /*
+        |--------------------------------------------------------------------------
+        | ENGINE FAILURE
+        |--------------------------------------------------------------------------
+        */
+
         if (
           !engineResult.success ||
           !engineResult.decision
@@ -710,11 +737,14 @@ export async function runAITradingCycle(): Promise<RunnerResult> {
           result.skipped++;
 
           result.results.push({
-            userId: user.id,
+            userId:
+              user.id,
 
             coin,
 
             executed: false,
+
+            simulated: true,
 
             message:
               engineResult.message ??
@@ -741,7 +771,8 @@ export async function runAITradingCycle(): Promise<RunnerResult> {
           result.skipped++;
 
           result.results.push({
-            userId: user.id,
+            userId:
+              user.id,
 
             coin,
 
@@ -752,6 +783,8 @@ export async function runAITradingCycle(): Promise<RunnerResult> {
               decision.confidence,
 
             executed: false,
+
+            simulated: true,
 
             message:
               decision.reason,
@@ -775,7 +808,8 @@ export async function runAITradingCycle(): Promise<RunnerResult> {
           result.skipped++;
 
           result.results.push({
-            userId: user.id,
+            userId:
+              user.id,
 
             coin,
 
@@ -787,6 +821,8 @@ export async function runAITradingCycle(): Promise<RunnerResult> {
 
             executed: false,
 
+            simulated: true,
+
             message:
               "Unsupported AI trading signal.",
           });
@@ -796,12 +832,13 @@ export async function runAITradingCycle(): Promise<RunnerResult> {
 
         /*
         |--------------------------------------------------------------------------
-        | BALANCE COIN
+        | BALANCE
         |--------------------------------------------------------------------------
         |
         | BUY  -> USDT
-        | SELL -> BTC / ETH / BNB
+        | SELL -> crypto correspondante
         |
+        |--------------------------------------------------------------------------
         */
 
         const balanceCoin: Coin =
@@ -809,12 +846,6 @@ export async function runAITradingCycle(): Promise<RunnerResult> {
           "BUY"
             ? "USDT"
             : coin;
-
-        /*
-        |--------------------------------------------------------------------------
-        | CLIENT INTERNAL BALANCE
-        |--------------------------------------------------------------------------
-        */
 
         const balance =
           await prisma.balance.findUnique({
@@ -847,7 +878,8 @@ export async function runAITradingCycle(): Promise<RunnerResult> {
           result.skipped++;
 
           result.results.push({
-            userId: user.id,
+            userId:
+              user.id,
 
             coin,
 
@@ -859,6 +891,8 @@ export async function runAITradingCycle(): Promise<RunnerResult> {
 
             executed: false,
 
+            simulated: true,
+
             message:
               `No available ${balanceCoin} balance for this client.`,
           });
@@ -868,7 +902,7 @@ export async function runAITradingCycle(): Promise<RunnerResult> {
 
         /*
         |--------------------------------------------------------------------------
-        | ALLOCATION
+        | MAXIMUM ALLOCATION
         |--------------------------------------------------------------------------
         */
 
@@ -886,7 +920,8 @@ export async function runAITradingCycle(): Promise<RunnerResult> {
           result.skipped++;
 
           result.results.push({
-            userId: user.id,
+            userId:
+              user.id,
 
             coin,
 
@@ -898,6 +933,8 @@ export async function runAITradingCycle(): Promise<RunnerResult> {
 
             executed: false,
 
+            simulated: true,
+
             message:
               "AI trade allocation is set to 0%.",
           });
@@ -907,14 +944,13 @@ export async function runAITradingCycle(): Promise<RunnerResult> {
 
         /*
         |--------------------------------------------------------------------------
-        | TRADE AMOUNT
+        | CALCULATE AMOUNT
         |--------------------------------------------------------------------------
         */
 
         const amount =
           calculateTradeAmount(
             availableBalance,
-
             allocation
           );
 
@@ -927,7 +963,8 @@ export async function runAITradingCycle(): Promise<RunnerResult> {
           result.skipped++;
 
           result.results.push({
-            userId: user.id,
+            userId:
+              user.id,
 
             coin,
 
@@ -939,6 +976,8 @@ export async function runAITradingCycle(): Promise<RunnerResult> {
 
             executed: false,
 
+            simulated: true,
+
             message:
               "Calculated AI trade amount is invalid.",
           });
@@ -948,17 +987,15 @@ export async function runAITradingCycle(): Promise<RunnerResult> {
 
         /*
         |--------------------------------------------------------------------------
-        | FINAL EXECUTION
+        | SIMULATED EXECUTION
         |--------------------------------------------------------------------------
         |
-        | executor.ts est responsable de :
+        | executor.ts ne contacte aucun service externe.
         |
-        | - Bybit
-        | - API keys
-        | - signature
-        | - vérifications finales
-        | - création de la position
+        | Il crée uniquement une position simulée
+        | dans Prisma.
         |
+        |--------------------------------------------------------------------------
         */
 
         let execution;
@@ -987,7 +1024,7 @@ export async function runAITradingCycle(): Promise<RunnerResult> {
             });
         } catch (error) {
           console.error(
-            `AI RUNNER EXECUTION ERROR (${user.id}/${coin}):`,
+            `AI RUNNER SIMULATION ERROR (${user.id}/${coin}):`,
             error
           );
 
@@ -1007,8 +1044,10 @@ export async function runAITradingCycle(): Promise<RunnerResult> {
 
             executed: false,
 
+            simulated: true,
+
             message:
-              "AI trade execution failed.",
+              "AI trade simulation failed.",
           });
 
           continue;
@@ -1016,7 +1055,7 @@ export async function runAITradingCycle(): Promise<RunnerResult> {
 
         /*
         |--------------------------------------------------------------------------
-        | SUCCESS
+        | SIMULATION SUCCESS
         |--------------------------------------------------------------------------
         */
 
@@ -1039,8 +1078,7 @@ export async function runAITradingCycle(): Promise<RunnerResult> {
 
             executed: true,
 
-            simulated:
-              execution.simulated,
+            simulated: true,
 
             tradeId:
               execution.tradeId,
@@ -1054,7 +1092,7 @@ export async function runAITradingCycle(): Promise<RunnerResult> {
 
         /*
         |--------------------------------------------------------------------------
-        | FAILURE
+        | SIMULATION FAILURE
         |--------------------------------------------------------------------------
         */
 
@@ -1074,8 +1112,7 @@ export async function runAITradingCycle(): Promise<RunnerResult> {
 
           executed: false,
 
-          simulated:
-            execution.simulated,
+          simulated: true,
 
           message:
             execution.message,
@@ -1085,7 +1122,7 @@ export async function runAITradingCycle(): Promise<RunnerResult> {
 
     /*
     |--------------------------------------------------------------------------
-    | RETURN
+    | FINAL RESULT
     |--------------------------------------------------------------------------
     */
 

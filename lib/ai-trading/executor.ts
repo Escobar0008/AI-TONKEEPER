@@ -4,6 +4,31 @@ import type {
   Coin,
 } from "@prisma/client";
 
+/*
+|--------------------------------------------------------------------------
+| AI TRADE EXECUTOR — SIMULATION ONLY
+|--------------------------------------------------------------------------
+|
+| IMPORTANT
+|
+| AI TONKEEPER ne passe AUCUN ordre externe.
+|
+| Il n'y a :
+| - aucune API Bybit
+| - aucune clé API
+| - aucun ordre réel
+| - aucun orderId externe
+| - aucun orderLinkId externe
+|
+| Les trades AI sont uniquement enregistrés dans Prisma
+| afin de permettre à l'interface de simuler le fonctionnement
+| du système de trading.
+|
+| Les prix utilisés viennent du système de marché CoinGecko.
+|
+|--------------------------------------------------------------------------
+*/
+
 type ExecuteTradeInput = {
   userId: string;
   coin: Coin;
@@ -18,9 +43,15 @@ export type ExecuteTradeResult = {
   simulated: boolean;
   message: string;
   tradeId?: string;
-  orderId?: string | null;
-  orderLinkId?: string | null;
+  orderId?: null;
+  orderLinkId?: null;
 };
+
+/*
+|--------------------------------------------------------------------------
+| SUPPORTED AI COINS
+|--------------------------------------------------------------------------
+*/
 
 const SUPPORTED_COINS: Coin[] = [
   "BTC",
@@ -28,25 +59,20 @@ const SUPPORTED_COINS: Coin[] = [
   "BNB",
 ];
 
+/*
+|--------------------------------------------------------------------------
+| FAILED RESULT
+|--------------------------------------------------------------------------
+*/
+
 function failed(
-  message: string,
-  simulated = false
+  message: string
 ): ExecuteTradeResult {
   return {
     success: false,
-    simulated,
+    simulated: true,
     message,
   };
-}
-
-function isValidPositiveNumber(
-  value: unknown
-): value is number {
-  return (
-    typeof value === "number" &&
-    Number.isFinite(value) &&
-    value > 0
-  );
 }
 
 /*
@@ -54,24 +80,17 @@ function isValidPositiveNumber(
 | EXECUTE AI TRADE
 |--------------------------------------------------------------------------
 |
-| Cette couche est volontairement sécurisée.
+| Cette fonction ne contacte aucun exchange.
 |
 | Elle :
 |
 | 1. vérifie l'utilisateur
-| 2. vérifie AI Trading
-| 3. vérifie les protections
-| 4. vérifie le solde interne
-| 5. vérifie l'allocation maximale
-| 6. empêche les doublons
-| 7. crée le AITrade
-| 8. marque la décision comme exécutée
-|
-| IMPORTANT :
-|
-| L'envoi d'un ordre Bybit réel doit être branché sur les fonctions
-| Bybit existantes du projet. On ne simule PAS un ordre réel en
-| retournant "simulated: false".
+| 2. vérifie les paramètres AI
+| 3. vérifie le solde interne
+| 4. vérifie l'allocation maximale
+| 5. empêche les trades doublons
+| 6. crée un trade SIMULÉ dans Prisma
+| 7. marque la décision AI comme exécutée
 |
 |--------------------------------------------------------------------------
 */
@@ -121,9 +140,8 @@ export async function executeAITrade(
     }
 
     if (
-      !isValidPositiveNumber(
-        amount
-      )
+      !Number.isFinite(amount) ||
+      amount <= 0
     ) {
       return failed(
         "Invalid trade amount."
@@ -131,9 +149,8 @@ export async function executeAITrade(
     }
 
     if (
-      !isValidPositiveNumber(
-        price
-      )
+      !Number.isFinite(price) ||
+      price <= 0
     ) {
       return failed(
         "Invalid market price."
@@ -141,9 +158,7 @@ export async function executeAITrade(
     }
 
     if (
-      !Number.isFinite(
-        confidence
-      ) ||
+      !Number.isFinite(confidence) ||
       confidence < 0 ||
       confidence > 100
     ) {
@@ -154,7 +169,7 @@ export async function executeAITrade(
 
     /*
     |--------------------------------------------------------------------------
-    | USER
+    | LOAD USER
     |--------------------------------------------------------------------------
     */
 
@@ -183,7 +198,7 @@ export async function executeAITrade(
 
     /*
     |--------------------------------------------------------------------------
-    | SETTINGS
+    | LOAD AI SETTINGS
     |--------------------------------------------------------------------------
     */
 
@@ -200,9 +215,15 @@ export async function executeAITrade(
       );
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | AI MUST BE ENABLED
+    |--------------------------------------------------------------------------
+    */
+
     if (!settings.enabled) {
       return failed(
-        "AI Trading is not enabled by the client."
+        "AI Trading is not enabled."
       );
     }
 
@@ -212,9 +233,7 @@ export async function executeAITrade(
     |--------------------------------------------------------------------------
     */
 
-    if (
-      settings.emergencyStop
-    ) {
+    if (settings.emergencyStop) {
       return failed(
         "AI Trading emergency stop is active."
       );
@@ -222,7 +241,7 @@ export async function executeAITrade(
 
     /*
     |--------------------------------------------------------------------------
-    | CONFIDENCE
+    | MINIMUM CONFIDENCE
     |--------------------------------------------------------------------------
     */
 
@@ -254,7 +273,7 @@ export async function executeAITrade(
 
     /*
     |--------------------------------------------------------------------------
-    | ALLOCATION
+    | MAXIMUM ALLOCATION
     |--------------------------------------------------------------------------
     */
 
@@ -286,40 +305,15 @@ export async function executeAITrade(
 
     /*
     |--------------------------------------------------------------------------
-    | DUPLICATE TRADE PROTECTION
-    |--------------------------------------------------------------------------
-    */
-
-    const existingTrade =
-      await prisma.aITrade.findFirst({
-        where: {
-          userId,
-          coin,
-          status: "OPEN",
-        },
-        select: {
-          id: true,
-        },
-      });
-
-    if (existingTrade) {
-      return failed(
-        `An AI trade is already open for ${pair}.`
-      );
-    }
-
-    /*
-    |--------------------------------------------------------------------------
     | INTERNAL BALANCE
     |--------------------------------------------------------------------------
     |
     | BUY:
-    | amount = USDT value
+    |   allocation basée sur le solde USDT
     |
     | SELL:
-    | amount = crypto quantity
+    |   allocation basée sur le solde crypto
     |
-    |--------------------------------------------------------------------------
     */
 
     const balanceCoin: Coin =
@@ -377,6 +371,12 @@ export async function executeAITrade(
       );
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | AMOUNT PROTECTION
+    |--------------------------------------------------------------------------
+    */
+
     if (
       amount >
       maximumTradeAmount
@@ -385,6 +385,12 @@ export async function executeAITrade(
         "Trade amount exceeds the configured maximum allocation."
       );
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | BALANCE PROTECTION
+    |--------------------------------------------------------------------------
+    */
 
     if (
       amount >
@@ -397,10 +403,38 @@ export async function executeAITrade(
 
     /*
     |--------------------------------------------------------------------------
-    | CREATE INTERNAL AI TRADE
+    | PREVENT DUPLICATE OPEN TRADE
+    |--------------------------------------------------------------------------
+    */
+
+    const existingTrade =
+      await prisma.aITrade.findFirst({
+        where: {
+          userId,
+          coin,
+          status: "OPEN",
+        },
+        select: {
+          id: true,
+        },
+      });
+
+    if (existingTrade) {
+      return failed(
+        `An AI trade is already open for ${pair}.`
+      );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | CREATE SIMULATED TRADE
     |--------------------------------------------------------------------------
     |
-    | On enregistre uniquement après toutes les validations.
+    | IMPORTANT :
+    |
+    | Cette création Prisma est la SEULE "exécution".
+    |
+    | Aucun ordre financier réel n'est envoyé.
     |
     */
 
@@ -408,19 +442,32 @@ export async function executeAITrade(
       await prisma.aITrade.create({
         data: {
           userId,
+
           settingsId:
             settings.id,
+
           coin,
+
           pair,
+
           side,
+
           status: "OPEN",
+
           amount,
+
           entryPrice: price,
+
           currentPrice: price,
+
           exitPrice: null,
+
           profit: 0,
+
           fee: 0,
+
           confidence,
+
           openedAt:
             new Date(),
         },
@@ -428,7 +475,7 @@ export async function executeAITrade(
 
     /*
     |--------------------------------------------------------------------------
-    | MARK AI DECISION EXECUTED
+    | MARK AI DECISION AS EXECUTED
     |--------------------------------------------------------------------------
     */
 
@@ -436,14 +483,16 @@ export async function executeAITrade(
       await prisma.aITradeDecision.findFirst({
         where: {
           userId,
-          settingsId:
-            settings.id,
+          settingsId: settings.id,
           coin,
           signal: side,
           executed: false,
         },
         orderBy: {
           createdAt: "desc",
+        },
+        select: {
+          id: true,
         },
       });
 
@@ -460,37 +509,43 @@ export async function executeAITrade(
 
     /*
     |--------------------------------------------------------------------------
-    | IMPORTANT
-    |--------------------------------------------------------------------------
-    |
-    | Le trade enregistré ici ne doit PAS être présenté comme un ordre
-    | Bybit réel tant que la couche d'exécution Bybit n'est pas appelée.
-    |
+    | SUCCESS
     |--------------------------------------------------------------------------
     */
 
     return {
       success: true,
+
+      /*
+       * Toujours true :
+       * ce trade est une simulation.
+       */
       simulated: true,
+
       message:
-        `AI ${side} trade prepared successfully for ${pair}.`,
-      tradeId: trade.id,
+        `AI ${side} simulation opened for ${pair}. No external order was submitted.`,
+
+      tradeId:
+        trade.id,
+
       orderId: null,
+
       orderLinkId: null,
     };
   } catch (error) {
     console.error(
-      "AI TRADE EXECUTOR ERROR:",
+      "AI TRADE SIMULATOR ERROR:",
       error
     );
 
     return {
       success: false,
-      simulated: false,
+      simulated: true,
+
       message:
         error instanceof Error
           ? error.message
-          : "Unable to process AI trade.",
+          : "Unable to process AI trade simulation.",
     };
   }
 }

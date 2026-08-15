@@ -5,11 +5,35 @@ import type {
   AIRiskLevel,
   Coin,
 } from "@prisma/client";
+
+/*
+|--------------------------------------------------------------------------
+| MARKET SNAPSHOT
+|--------------------------------------------------------------------------
+|
+| Les données arrivent depuis notre couche marché.
+|
+| La source actuelle est CoinGecko via:
+|
+| /api/crypto
+|
+| Ce moteur ne contacte directement aucun exchange.
+|
+|--------------------------------------------------------------------------
+*/
+
 export type MarketSnapshot = {
   coin: Coin;
   price: number;
   change24h: number;
 };
+
+/*
+|--------------------------------------------------------------------------
+| AI DECISION
+|--------------------------------------------------------------------------
+*/
+
 export type AIEngineDecision = {
   signal: AITradeSignal;
   confidence: number;
@@ -19,26 +43,47 @@ export type AIEngineDecision = {
   pair: string;
   allowed: boolean;
 };
-type EngineResult = {
+
+/*
+|--------------------------------------------------------------------------
+| ENGINE RESULT
+|--------------------------------------------------------------------------
+*/
+
+export type EngineResult = {
   success: boolean;
   decision?: AIEngineDecision;
   message?: string;
 };
+
 /*
 |--------------------------------------------------------------------------
-| CONSTANTS
+| SUPPORTED AI COINS
+|--------------------------------------------------------------------------
+|
+| AI Spot Trading utilise actuellement:
+|
+| BTC/USDT
+| ETH/USDT
+| BNB/USDT
+|
+| Aucun ordre réel n'est exécuté.
+|
 |--------------------------------------------------------------------------
 */
+
 const SUPPORTED_AI_COINS: Coin[] = [
   "BTC",
   "ETH",
   "BNB",
 ];
+
 /*
 |--------------------------------------------------------------------------
 | HELPERS
 |--------------------------------------------------------------------------
 */
+
 function clamp(
   value: number,
   min: number,
@@ -49,6 +94,7 @@ function clamp(
     max
   );
 }
+
 function isSupportedCoin(
   coin: Coin
 ): boolean {
@@ -56,83 +102,101 @@ function isSupportedCoin(
     coin
   );
 }
+
 /*
 |--------------------------------------------------------------------------
 | CONFIDENCE
 |--------------------------------------------------------------------------
 |
-| Confidence is based on:
+| La confiance est calculée à partir:
 |
-| - 24h market movement
-| - selected AI strategy
+| - du mouvement 24h
+| - de la stratégie choisie
 |
 |--------------------------------------------------------------------------
 */
+
 function calculateConfidence(
   change24h: number,
   strategy: AITradeStrategy
 ): number {
   const absoluteChange =
     Math.abs(change24h);
+
   let confidence = 50;
+
   if (absoluteChange >= 10) {
     confidence += 25;
+  } else if (absoluteChange >= 7) {
+    confidence += 20;
   } else if (absoluteChange >= 5) {
     confidence += 18;
+  } else if (absoluteChange >= 3) {
+    confidence += 12;
   } else if (absoluteChange >= 2) {
     confidence += 10;
   } else if (absoluteChange >= 1) {
     confidence += 5;
   }
+
   switch (strategy) {
     case "CONSERVATIVE":
       confidence -= 10;
       break;
+
     case "AGGRESSIVE":
       confidence += 10;
       break;
+
     case "BALANCED":
     default:
       break;
   }
+
   return clamp(
     confidence,
     0,
     100
   );
 }
+
 /*
 |--------------------------------------------------------------------------
 | SIGNAL
 |--------------------------------------------------------------------------
 |
-| Positive movement >= 5%:
-| BUY candidate
+| Mouvement positif important:
+| BUY
 |
-| Negative movement <= -5%:
-| SELL candidate
+| Mouvement négatif important:
+| SELL
 |
-| Otherwise:
+| Marché faible:
 | WAIT
 |
 |--------------------------------------------------------------------------
 */
+
 function calculateSignal(
   change24h: number
 ): AITradeSignal {
   if (change24h >= 5) {
     return "BUY";
   }
+
   if (change24h <= -5) {
     return "SELL";
   }
+
   return "WAIT";
 }
+
 /*
 |--------------------------------------------------------------------------
 | RISK CHECK
 |--------------------------------------------------------------------------
 */
+
 function isRiskAllowed(
   riskLevel: AIRiskLevel,
   confidence: number,
@@ -145,28 +209,42 @@ function isRiskAllowed(
   ) {
     return false;
   }
+
+  if (
+    minimumConfidence < 0 ||
+    minimumConfidence > 100
+  ) {
+    return false;
+  }
+
   if (
     confidence <
     minimumConfidence
   ) {
     return false;
   }
+
   switch (riskLevel) {
     case "LOW":
       return confidence >= 85;
+
     case "MEDIUM":
       return confidence >= 75;
+
     case "HIGH":
       return confidence >= 65;
+
     default:
       return false;
   }
 }
+
 /*
 |--------------------------------------------------------------------------
 | SAVE DECISION
 |--------------------------------------------------------------------------
 */
+
 async function saveDecision(
   userId: string,
   settingsId: string,
@@ -179,39 +257,76 @@ async function saveDecision(
     data: {
       userId,
       settingsId,
+
       coin: market.coin,
+
       pair: `${market.coin}/USDT`,
+
       signal,
+
       confidence,
+
       price: market.price,
+
       reason,
+
       executed: false,
     },
   });
 }
+
+/*
+|--------------------------------------------------------------------------
+| BUILD DECISION
+|--------------------------------------------------------------------------
+*/
+
+function buildDecision(
+  market: MarketSnapshot,
+  signal: AITradeSignal,
+  confidence: number,
+  reason: string,
+  allowed: boolean
+): AIEngineDecision {
+  return {
+    signal,
+
+    confidence,
+
+    reason,
+
+    price: market.price,
+
+    coin: market.coin,
+
+    pair: `${market.coin}/USDT`,
+
+    allowed,
+  };
+}
+
 /*
 |--------------------------------------------------------------------------
 | MAIN AI ENGINE
 |--------------------------------------------------------------------------
 |
-| IMPORTANT
+| RESPONSABILITÉS:
 |
-| engine.ts DOES NOT send orders to Bybit.
+| 1. Vérifier l'utilisateur
+| 2. Vérifier les paramètres AI
+| 3. Vérifier les protections
+| 4. Analyser le marché réel
+| 5. Produire BUY / SELL / WAIT
+| 6. Calculer la confiance
+| 7. Enregistrer la décision
 |
-| Its job is only:
+| IMPORTANT:
 |
-| 1. Verify the user
-| 2. Verify AI Trading settings
-| 3. Verify protections
-| 4. Analyse market data
-| 5. Generate BUY / SELL / WAIT
-| 6. Calculate confidence
-| 7. Save AI decision
-|
-| The execution layer is handled separately.
+| Ce fichier ne réalise AUCUNE transaction réelle.
 |
 |--------------------------------------------------------------------------
 */
+
 export async function runAITradingEngine(
   userId: string,
   market: MarketSnapshot
@@ -222,6 +337,7 @@ export async function runAITradingEngine(
     | USER VALIDATION
     |--------------------------------------------------------------------------
     */
+
     if (!userId) {
       return {
         success: false,
@@ -229,16 +345,25 @@ export async function runAITradingEngine(
           "User ID is required.",
       };
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | LOAD USER
+    |--------------------------------------------------------------------------
+    */
+
     const user =
       await prisma.user.findUnique({
         where: {
           id: userId,
         },
+
         select: {
           id: true,
           accountLocked: true,
         },
       });
+
     if (!user) {
       return {
         success: false,
@@ -246,11 +371,13 @@ export async function runAITradingEngine(
           "User not found.",
       };
     }
+
     /*
     |--------------------------------------------------------------------------
     | ACCOUNT LOCK
     |--------------------------------------------------------------------------
     */
+
     if (user.accountLocked) {
       return {
         success: false,
@@ -258,11 +385,13 @@ export async function runAITradingEngine(
           "User account is locked.",
       };
     }
+
     /*
     |--------------------------------------------------------------------------
     | MARKET VALIDATION
     |--------------------------------------------------------------------------
     */
+
     if (
       !Number.isFinite(
         market.price
@@ -275,6 +404,7 @@ export async function runAITradingEngine(
           "Invalid market price.",
       };
     }
+
     if (
       !Number.isFinite(
         market.change24h
@@ -286,11 +416,13 @@ export async function runAITradingEngine(
           "Invalid 24h market change.",
       };
     }
+
     /*
     |--------------------------------------------------------------------------
     | COIN VALIDATION
     |--------------------------------------------------------------------------
     */
+
     if (
       !isSupportedCoin(
         market.coin
@@ -302,17 +434,22 @@ export async function runAITradingEngine(
           `${market.coin} is not supported by AI Spot Trading.`,
       };
     }
+
     /*
     |--------------------------------------------------------------------------
-    | LOAD SETTINGS
+    | LOAD AI SETTINGS
     |--------------------------------------------------------------------------
     */
+
     const settings =
-      await prisma.aITradeSettings.findUnique({
-        where: {
-          userId,
-        },
-      });
+      await prisma.aITradeSettings.findUnique(
+        {
+          where: {
+            userId,
+          },
+        }
+      );
+
     if (!settings) {
       return {
         success: false,
@@ -320,11 +457,13 @@ export async function runAITradingEngine(
           "AI Trading settings not found.",
       };
     }
+
     /*
     |--------------------------------------------------------------------------
     | AI ENABLED
     |--------------------------------------------------------------------------
     */
+
     if (!settings.enabled) {
       return {
         success: false,
@@ -332,11 +471,13 @@ export async function runAITradingEngine(
           "AI Trading is not enabled by the client.",
       };
     }
+
     /*
     |--------------------------------------------------------------------------
     | EMERGENCY STOP
     |--------------------------------------------------------------------------
     */
+
     if (
       settings.emergencyStop
     ) {
@@ -346,15 +487,18 @@ export async function runAITradingEngine(
           "AI Trading emergency stop is active.",
       };
     }
+
     /*
     |--------------------------------------------------------------------------
-    | SETTINGS VALIDATION
+    | MINIMUM CONFIDENCE
     |--------------------------------------------------------------------------
     */
+
     const minimumConfidence =
       Number(
         settings.minimumConfidence
       );
+
     if (
       !Number.isFinite(
         minimumConfidence
@@ -368,10 +512,26 @@ export async function runAITradingEngine(
           "AI minimum confidence setting is invalid.",
       };
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | MAXIMUM ALLOCATION
+    |--------------------------------------------------------------------------
+    |
+    | L'allocation est vérifiée ici.
+    |
+    | Le calcul du montant est effectué
+    | séparément par le runner/exécution
+    | du paper trading.
+    |
+    |--------------------------------------------------------------------------
+    */
+
     const maximumAllocation =
       Number(
         settings.maximumTradeAllocation
       );
+
     if (
       !Number.isFinite(
         maximumAllocation
@@ -385,35 +545,44 @@ export async function runAITradingEngine(
           "AI maximum trade allocation setting is invalid.",
       };
     }
+
     /*
     |--------------------------------------------------------------------------
     | CALCULATE SIGNAL
     |--------------------------------------------------------------------------
     */
+
     const signal =
       calculateSignal(
         market.change24h
       );
+
     /*
     |--------------------------------------------------------------------------
     | CALCULATE CONFIDENCE
     |--------------------------------------------------------------------------
     */
+
     const confidence =
       calculateConfidence(
         market.change24h,
         settings.strategy
       );
+
     /*
     |--------------------------------------------------------------------------
     | WAIT
     |--------------------------------------------------------------------------
     */
+
     if (
       signal === "WAIT"
     ) {
       const reason =
-        "Market conditions are not strong enough. AI is waiting.";
+        `Market movement is ${market.change24h.toFixed(
+          2
+        )}% over 24h. Conditions are not strong enough for a paper trade. AI is waiting.`;
+
       await saveDecision(
         userId,
         settings.id,
@@ -422,35 +591,40 @@ export async function runAITradingEngine(
         confidence,
         reason
       );
+
       return {
         success: true,
-        decision: {
-          signal: "WAIT",
-          confidence,
-          reason,
-          price: market.price,
-          coin: market.coin,
-          pair: `${market.coin}/USDT`,
-          allowed: false,
-        },
+
+        decision:
+          buildDecision(
+            market,
+            "WAIT",
+            confidence,
+            reason,
+            false
+          ),
       };
     }
+
     /*
     |--------------------------------------------------------------------------
     | RISK CHECK
     |--------------------------------------------------------------------------
     */
+
     const riskAllowed =
       isRiskAllowed(
         settings.riskLevel,
         confidence,
         minimumConfidence
       );
+
     if (!riskAllowed) {
       const reason =
-        `Signal ${signal} detected, but confidence ${confidence.toFixed(
+        `Signal ${signal} detected with ${confidence.toFixed(
           2
-        )}% does not satisfy the configured risk requirements.`;
+        )}% confidence, but the configured risk requirements were not satisfied.`;
+
       await saveDecision(
         userId,
         settings.id,
@@ -459,45 +633,73 @@ export async function runAITradingEngine(
         confidence,
         reason
       );
+
       return {
         success: true,
-        decision: {
-          signal,
-          confidence,
-          reason,
-          price: market.price,
-          coin: market.coin,
-          pair: `${market.coin}/USDT`,
-          allowed: false,
-        },
+
+        decision:
+          buildDecision(
+            market,
+            signal,
+            confidence,
+            reason,
+            false
+          ),
       };
     }
+
     /*
     |--------------------------------------------------------------------------
-    | PROTECTION INFORMATION
+    | BUILD ALLOWED DECISION
     |--------------------------------------------------------------------------
     */
+
     let reason =
-      `AI detected a ${signal} signal with ${confidence.toFixed(
+      `AI detected a ${signal} signal for ${market.coin}/USDT with ${confidence.toFixed(
         2
-      )}% confidence.`;
+      )}% confidence based on the current market snapshot.`;
+
+    /*
+    |--------------------------------------------------------------------------
+    | STOP LOSS INFORMATION
+    |--------------------------------------------------------------------------
+    */
+
     if (
       settings.stopLossProtection
     ) {
       reason +=
         " Stop-loss protection is enabled.";
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | DAILY LOSS INFORMATION
+    |--------------------------------------------------------------------------
+    */
+
     if (
       settings.dailyLossProtection
     ) {
       reason +=
         " Daily-loss protection is enabled.";
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | PAPER TRADING INFORMATION
+    |--------------------------------------------------------------------------
+    */
+
+    reason +=
+      " The resulting trade, if executed, is a paper trade only.";
+
     /*
     |--------------------------------------------------------------------------
     | SAVE ALLOWED DECISION
     |--------------------------------------------------------------------------
     */
+
     await saveDecision(
       userId,
       settings.id,
@@ -506,30 +708,40 @@ export async function runAITradingEngine(
       confidence,
       reason
     );
+
     /*
     |--------------------------------------------------------------------------
     | RETURN DECISION
     |--------------------------------------------------------------------------
     */
+
     return {
       success: true,
-      decision: {
-        signal,
-        confidence,
-        reason,
-        price: market.price,
-        coin: market.coin,
-        pair: `${market.coin}/USDT`,
-        allowed: true,
-      },
+
+      decision:
+        buildDecision(
+          market,
+          signal,
+          confidence,
+          reason,
+          true
+        ),
     };
   } catch (error) {
+    /*
+    |--------------------------------------------------------------------------
+    | ERROR
+    |--------------------------------------------------------------------------
+    */
+
     console.error(
       "AI TRADING ENGINE ERROR:",
       error
     );
+
     return {
       success: false,
+
       message:
         error instanceof Error
           ? error.message
@@ -537,22 +749,25 @@ export async function runAITradingEngine(
     };
   }
 }
+
 /*
 |--------------------------------------------------------------------------
-| MAXIMUM TRADE ALLOCATION
+| MAXIMUM PAPER TRADE AMOUNT
 |--------------------------------------------------------------------------
 |
-| This function uses the client's internal available balance.
-|
-| Example:
+| Exemple:
 |
 | balance = 1,000
 | allocation = 10%
 |
-| result = 100
+| résultat = 100
+|
+| Cette fonction sert uniquement au calcul
+| du montant du paper trade.
 |
 |--------------------------------------------------------------------------
 */
+
 export function calculateMaximumTradeAmount(
   availableBalance: number,
   maximumTradeAllocation: number
@@ -565,6 +780,7 @@ export function calculateMaximumTradeAmount(
   ) {
     return 0;
   }
+
   if (
     !Number.isFinite(
       maximumTradeAllocation
@@ -573,14 +789,24 @@ export function calculateMaximumTradeAmount(
   ) {
     return 0;
   }
+
   const allocation =
     clamp(
       maximumTradeAllocation,
       0,
       100
     );
-  return (
+
+  const amount =
     availableBalance *
-    (allocation / 100)
-  );
+    (allocation / 100);
+
+  if (
+    !Number.isFinite(amount) ||
+    amount <= 0
+  ) {
+    return 0;
+  }
+
+  return amount;
 }

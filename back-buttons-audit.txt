@@ -1,0 +1,1976 @@
+==================================================
+       AI TONKEEPER - BACK BUTTONS AUDIT
+==================================================
+
+
+--------------------------------------------------
+FICHIER : C:\Users\PC\ai-tonkeeper\app\about\page.tsx
+LIGNE   : 262
+STATUS  : NAVIGATION DETECTEE
+
+onClick       = True
+Link          = False
+href          = False
+router.back   = False
+history.back  = False
+
+CONTEXTE :
+  252: <div className="mx-auto max-w-md px-5 py-6">
+  253: 
+  254: {/* HEADER */}
+  255: <div className="mb-8 flex items-center justify-between">
+  256: <button
+  257: type="button"
+  258: onClick={() => router.back()}
+  259: aria-label={current.back}
+  260: className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-800 bg-[#101A2C] transition hover:bg-[#16233D]"
+  261: >
+  262: <ArrowLeft size={22} />
+  263: </button>
+  264: 
+  265: <div className="text-center">
+  266: <h1 className="text-xl font-bold">
+  267: {current.title}
+  268: </h1>
+  269: 
+  270: <p className="mt-1 text-xs text-slate-400">
+  271: {current.subtitle}
+  272: </p>
+
+--------------------------------------------------
+FICHIER : C:\Users\PC\ai-tonkeeper\app\achievements\page.tsx
+LIGNE   : 30
+STATUS  : NAVIGATION DETECTEE
+
+onClick       = False
+Link          = True
+href          = True
+router.back   = False
+history.back  = False
+
+CONTEXTE :
+   20: <div className="mx-auto w-full max-w-md px-5 py-6 pb-28">
+   21: 
+   22: {/* Header */}
+   23: 
+   24: <div className="mb-8 flex items-center justify-between">
+   25: 
+   26: <Link href="/dashboard">
+   27: 
+   28: <button className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-800 bg-[#101A2C]">
+   29: 
+   30: <ArrowLeft size={22} />
+   31: 
+   32: </button>
+   33: 
+   34: </Link>
+   35: 
+   36: <div className="flex-1 px-3 text-center">
+   37: 
+   38: <h1 className="text-2xl font-bold">
+   39: Achievements
+   40: </h1>
+
+--------------------------------------------------
+FICHIER : C:\Users\PC\ai-tonkeeper\app\activity-log\page.tsx
+LIGNE   : 25
+STATUS  : NAVIGATION DETECTEE
+
+onClick       = False
+Link          = True
+href          = True
+router.back   = False
+history.back  = False
+
+CONTEXTE :
+   15: return (
+   16: <main className="min-h-screen bg-[#050B18] text-white">
+   17: <div className="mx-auto max-w-md px-5 py-6 pb-28">
+   18: 
+   19: {/* Header */}
+   20: <div className="mb-8 flex items-center justify-between">
+   21: <Link
+   22: href="/admin"
+   23: className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-800 bg-[#101A2C]"
+   24: >
+   25: <ArrowLeft size={22} />
+   26: </Link>
+   27: 
+   28: <div className="text-center">
+   29: <h1 className="text-2xl font-bold">
+   30: Activity Log
+   31: </h1>
+   32: 
+   33: <p className="mt-1 text-sm text-slate-400">
+   34: Platform activity monitoring
+   35: </p>
+
+--------------------------------------------------
+FICHIER : C:\Users\PC\ai-tonkeeper\app\admin\page.tsx
+LIGNE   : 30
+STATUS  : NAVIGATION DETECTEE
+
+onClick       = False
+Link          = True
+href          = True
+router.back   = False
+history.back  = False
+
+CONTEXTE :
+   20: return (
+   21: <main className="min-h-screen bg-[#050B18] text-white">
+   22: <div className="mx-auto max-w-md px-5 py-6 pb-10">
+   23: 
+   24: {/* HEADER */}
+   25: <div className="mb-6 flex items-center justify-between">
+   26: <Link
+   27: href="/dashboard"
+   28: className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-800 bg-[#101A2C] transition hover:border-cyan-500"
+   29: >
+   30: <ArrowLeft size={20} />
+   31: </Link>
+   32: 
+   33: <div className="text-center">
+   34: <h1 className="text-2xl font-bold">
+   35: Admin Dashboard
+   36: </h1>
+   37: 
+   38: <p className="text-sm text-gray-400">
+   39: AI TONKEEPER Control Center
+   40: </p>
+
+--------------------------------------------------
+FICHIER : C:\Users\PC\ai-tonkeeper\app\admin\kyc\[applicationId]\page.tsx
+LIGNE   : 489
+STATUS  : NAVIGATION DETECTEE
+
+onClick       = True
+Link          = False
+href          = False
+router.back   = False
+history.back  = False
+
+CONTEXTE :
+  479: }
+  480: if (error && !application) {
+  481: return (
+  482: <main className="min-h-screen bg-[#050B18] text-white">
+  483: <div className="mx-auto max-w-6xl px-5 py-8">
+  484: <button
+  485: type="button"
+  486: onClick={goBack}
+  487: className="mb-6 flex items-center gap-2 text-sm text-slate-400 transition hover:text-white"
+  488: >
+  489: <ArrowLeft size={18} />
+  490: Back to KYC
+  491: </button>
+  492: <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-6">
+  493: <div className="flex items-start gap-3">
+  494: <AlertCircle
+  495: className="mt-0.5 shrink-0 text-red-400"
+  496: size={22}
+  497: />
+  498: <div>
+  499: <h2 className="font-semibold text-red-300">
+
+--------------------------------------------------
+FICHIER : C:\Users\PC\ai-tonkeeper\app\admin\kyc\[applicationId]\page.tsx
+LIGNE   : 534
+STATUS  : NAVIGATION DETECTEE
+
+onClick       = True
+Link          = False
+href          = False
+router.back   = False
+history.back  = False
+
+CONTEXTE :
+  524: return (
+  525: <main className="min-h-screen bg-[#050B18] text-white">
+  526: <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+  527: <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+  528: <div>
+  529: <button
+  530: type="button"
+  531: onClick={goBack}
+  532: className="mb-3 flex items-center gap-2 text-sm text-slate-400 transition hover:text-white"
+  533: >
+  534: <ArrowLeft size={18} />
+  535: Back to KYC applications
+  536: </button>
+  537: <h1 className="text-2xl font-bold sm:text-3xl">
+  538: KYC Application
+  539: </h1>
+  540: <p className="mt-1 break-all text-xs text-slate-500">
+  541: Application ID: {application.id}
+  542: </p>
+  543: </div>
+  544: <div
+
+--------------------------------------------------
+FICHIER : C:\Users\PC\ai-tonkeeper\app\ai-bots\page.tsx
+LIGNE   : 30
+STATUS  : NAVIGATION DETECTEE
+
+onClick       = False
+Link          = True
+href          = True
+router.back   = False
+history.back  = False
+
+CONTEXTE :
+   20: <div className="max-w-md mx-auto px-5 py-6 pb-28">
+   21: 
+   22: {/* Header */}
+   23: 
+   24: <div className="flex items-center justify-between mb-8">
+   25: 
+   26: <Link href="/dashboard">
+   27: 
+   28: <button className="w-12 h-12 rounded-2xl border border-slate-800 bg-[#101A2C] flex items-center justify-center">
+   29: 
+   30: <ArrowLeft size={22} />
+   31: 
+   32: </button>
+   33: 
+   34: </Link>
+   35: 
+   36: <div className="text-center">
+   37: 
+   38: <h1 className="text-2xl font-bold">
+   39: AI Trade Bots
+   40: </h1>
+
+--------------------------------------------------
+FICHIER : C:\Users\PC\ai-tonkeeper\app\ai-insights\page.tsx
+LIGNE   : 28
+STATUS  : NAVIGATION DETECTEE
+
+onClick       = False
+Link          = True
+href          = True
+router.back   = False
+history.back  = False
+
+CONTEXTE :
+   18: <div className="mx-auto w-full max-w-md px-5 py-6 pb-28">
+   19: 
+   20: {/* Header */}
+   21: 
+   22: <div className="mb-8 flex items-center justify-between">
+   23: 
+   24: <Link href="/dashboard">
+   25: 
+   26: <button className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-800 bg-[#101A2C]">
+   27: 
+   28: <ArrowLeft size={22} />
+   29: 
+   30: </button>
+   31: 
+   32: </Link>
+   33: 
+   34: <div className="flex-1 px-3 text-center">
+   35: 
+   36: <h1 className="text-2xl font-bold">
+   37: AI Insights
+   38: </h1>
+
+--------------------------------------------------
+FICHIER : C:\Users\PC\ai-tonkeeper\app\ai-portfolio-manager\page.tsx
+LIGNE   : 28
+STATUS  : NAVIGATION DETECTEE
+
+onClick       = False
+Link          = True
+href          = True
+router.back   = False
+history.back  = False
+
+CONTEXTE :
+   18: <div className="mx-auto w-full max-w-md px-5 py-6 pb-28">
+   19: 
+   20: {/* Header */}
+   21: 
+   22: <div className="mb-8 flex items-center justify-between">
+   23: 
+   24: <Link href="/dashboard">
+   25: 
+   26: <button className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-800 bg-[#101A2C]">
+   27: 
+   28: <ArrowLeft size={22} />
+   29: 
+   30: </button>
+   31: 
+   32: </Link>
+   33: 
+   34: <div className="flex-1 px-3 text-center">
+   35: 
+   36: <h1 className="text-2xl font-bold">
+   37: AI Portfolio
+   38: </h1>
+
+--------------------------------------------------
+FICHIER : C:\Users\PC\ai-tonkeeper\app\ai-signals\page.tsx
+LIGNE   : 28
+STATUS  : NAVIGATION DETECTEE
+
+onClick       = False
+Link          = True
+href          = True
+router.back   = False
+history.back  = False
+
+CONTEXTE :
+   18: <div className="mx-auto w-full max-w-md px-5 py-6 pb-28">
+   19: 
+   20: {/* Header */}
+   21: 
+   22: <div className="mb-8 flex items-center justify-between">
+   23: 
+   24: <Link href="/dashboard">
+   25: 
+   26: <button className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-800 bg-[#101A2C]">
+   27: 
+   28: <ArrowLeft size={22} />
+   29: 
+   30: </button>
+   31: 
+   32: </Link>
+   33: 
+   34: <div className="flex-1 px-3 text-center">
+   35: 
+   36: <h1 className="text-2xl font-bold">
+   37: AI Signals
+   38: </h1>
+
+--------------------------------------------------
+FICHIER : C:\Users\PC\ai-tonkeeper\app\ai-trade\page.tsx
+LIGNE   : 745
+STATUS  : NAVIGATION DETECTEE
+
+onClick       = True
+Link          = False
+href          = False
+router.back   = False
+history.back  = False
+
+CONTEXTE :
+  735: {/* HEADER */}
+  736: 
+  737: <div className="flex items-center justify-between mb-6">
+  738: <button
+  739: type="button"
+  740: onClick={() =>
+  741: window.history.back()
+  742: }
+  743: className="w-11 h-11 rounded-full bg-[#101A2C] border border-slate-800 flex items-center justify-center hover:bg-[#16233D] transition"
+  744: >
+  745: <ArrowLeft size={20} />
+  746: </button>
+  747: 
+  748: <div className="text-center">
+  749: <h1 className="text-2xl font-bold">
+  750: AI Trade
+  751: </h1>
+  752: 
+  753: <p className="text-sm text-cyan-400">
+  754: Real-Time AI Trading
+  755: </p>
+
+--------------------------------------------------
+FICHIER : C:\Users\PC\ai-tonkeeper\app\ai-trade\settings\page.tsx
+LIGNE   : 161
+STATUS  : NAVIGATION DETECTEE
+
+onClick       = True
+Link          = False
+href          = False
+router.back   = False
+history.back  = False
+
+CONTEXTE :
+  151: }, []);
+  152: return (
+  153: <main className="min-h-screen bg-[#050B18] text-white pb-10">
+  154: <div className="max-w-md mx-auto px-5 py-6">
+  155: {/* Header */}
+  156: <div className="flex items-center justify-between mb-8">
+  157: <button
+  158: onClick={() => router.back()}
+  159: className="w-12 h-12 rounded-2xl bg-[#101A2C] border border-slate-800 flex items-center justify-center"
+  160: >
+  161: <ArrowLeft size={22} />
+  162: </button>
+  163: <div className="text-center">
+  164: <h1 className="text-2xl font-bold">
+  165: AI Trade Settings
+  166: </h1>
+  167: <p className="text-sm text-cyan-400 mt-1">
+  168: Configure your AI trading engine
+  169: </p>
+  170: </div>
+  171: <div className="w-12 h-12" />
+
+--------------------------------------------------
+FICHIER : C:\Users\PC\ai-tonkeeper\app\ai-trading-journal\page.tsx
+LIGNE   : 28
+STATUS  : NAVIGATION DETECTEE
+
+onClick       = False
+Link          = True
+href          = True
+router.back   = False
+history.back  = False
+
+CONTEXTE :
+   18: <div className="mx-auto w-full max-w-md px-5 py-6 pb-28">
+   19: 
+   20: {/* Header */}
+   21: 
+   22: <div className="mb-8 flex items-center justify-between">
+   23: 
+   24: <Link href="/dashboard">
+   25: 
+   26: <button className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-800 bg-[#101A2C]">
+   27: 
+   28: <ArrowLeft size={22} />
+   29: 
+   30: </button>
+   31: 
+   32: </Link>
+   33: 
+   34: <div className="flex-1 px-3 text-center">
+   35: 
+   36: <h1 className="text-2xl font-bold">
+   37: AI Trading Journal
+   38: </h1>
+
+--------------------------------------------------
+FICHIER : C:\Users\PC\ai-tonkeeper\app\analytics\page.tsx
+LIGNE   : 30
+STATUS  : NAVIGATION DETECTEE
+
+onClick       = False
+Link          = True
+href          = True
+router.back   = False
+history.back  = False
+
+CONTEXTE :
+   20: <div className="max-w-md mx-auto px-5 py-6 pb-28">
+   21: 
+   22: {/* Header */}
+   23: 
+   24: <div className="flex items-center justify-between mb-8">
+   25: 
+   26: <Link href="/dashboard">
+   27: 
+   28: <button className="w-12 h-12 rounded-2xl border border-slate-800 bg-[#101A2C] flex items-center justify-center">
+   29: 
+   30: <ArrowLeft size={22} />
+   31: 
+   32: </button>
+   33: 
+   34: </Link>
+   35: 
+   36: <div className="text-center">
+   37: 
+   38: <h1 className="text-2xl font-bold">
+   39: Analytics
+   40: </h1>
+
+--------------------------------------------------
+FICHIER : C:\Users\PC\ai-tonkeeper\app\app-settings\page.tsx
+LIGNE   : 357
+STATUS  : NAVIGATION DETECTEE
+
+onClick       = True
+Link          = False
+href          = False
+router.back   = False
+history.back  = False
+
+CONTEXTE :
+  347: if (loading) {
+  348: return (
+  349: <main className="min-h-screen bg-[#050B18] text-white pb-32">
+  350: <div className="max-w-md mx-auto px-5 py-6">
+  351: <div className="flex items-center justify-between mb-8">
+  352: <button
+  353: type="button"
+  354: onClick={() => router.back()}
+  355: className="w-12 h-12 rounded-2xl bg-[#101A2C] border border-slate-800 flex items-center justify-center"
+  356: >
+  357: <ArrowLeft size={22} />
+  358: </button>
+  359: 
+  360: <h1 className="text-2xl font-bold">
+  361: App Settings
+  362: </h1>
+  363: 
+  364: <div className="w-12 h-12 rounded-2xl bg-[#101A2C] border border-slate-800 flex items-center justify-center">
+  365: <Settings
+  366: size={21}
+  367: className="text-cyan-400"
+
+--------------------------------------------------
+FICHIER : C:\Users\PC\ai-tonkeeper\app\app-settings\page.tsx
+LIGNE   : 396
+STATUS  : NAVIGATION DETECTEE
+
+onClick       = True
+Link          = False
+href          = False
+router.back   = False
+history.back  = False
+
+CONTEXTE :
+  386: {/* =====================================================
+  387: HEADER
+  388: ====================================================== */}
+  389: 
+  390: <div className="flex items-center justify-between mb-8">
+  391: <button
+  392: type="button"
+  393: onClick={() => router.back()}
+  394: className="w-12 h-12 rounded-2xl bg-[#101A2C] border border-slate-800 flex items-center justify-center hover:bg-[#16233D] transition"
+  395: >
+  396: <ArrowLeft size={22} />
+  397: </button>
+  398: 
+  399: <h1 className="text-2xl font-bold">
+  400: App Settings
+  401: </h1>
+  402: 
+  403: <div className="w-12 h-12 rounded-2xl bg-[#101A2C] border border-slate-800 flex items-center justify-center">
+  404: <Settings
+  405: size={21}
+  406: className="text-cyan-400"
+
+--------------------------------------------------
+FICHIER : C:\Users\PC\ai-tonkeeper\app\assistant\page.tsx
+LIGNE   : 333
+STATUS  : NAVIGATION DETECTEE
+
+onClick       = False
+Link          = True
+href          = True
+router.back   = False
+history.back  = False
+
+CONTEXTE :
+  323: HEADER
+  324: ====================================================== */}
+  325: 
+  326: <header className="grid grid-cols-[48px_1fr_48px] items-center gap-3">
+  327: 
+  328: <Link
+  329: href="/dashboard"
+  330: aria-label="Back to dashboard"
+  331: className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-800 bg-[#101A2C] transition hover:border-cyan-500"
+  332: >
+  333: <ArrowLeft size={21} />
+  334: </Link>
+  335: 
+  336: <div className="min-w-0 text-center">
+  337: <h1 className="truncate text-lg font-bold sm:text-xl">
+  338: AI Assistant
+  339: </h1>
+  340: 
+  341: <div className="mt-1 flex items-center justify-center gap-2">
+  342: <span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-green-400" />
+  343: 
+
+--------------------------------------------------
+FICHIER : C:\Users\PC\ai-tonkeeper\app\audit-security\page.tsx
+LIGNE   : 28
+STATUS  : NAVIGATION DETECTEE
+
+onClick       = False
+Link          = True
+href          = True
+router.back   = False
+history.back  = False
+
+CONTEXTE :
+   18: <div className="mx-auto max-w-md px-5 py-6 pb-28">
+   19: 
+   20: {/* Header */}
+   21: 
+   22: <div className="mb-8 flex items-center justify-between">
+   23: 
+   24: <Link
+   25: href="/admin"
+   26: className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-800 bg-[#101A2C]"
+   27: >
+   28: <ArrowLeft size={22} />
+   29: </Link>
+   30: 
+   31: <div className="text-center">
+   32: 
+   33: <h1 className="text-2xl font-bold">
+   34: Audit & Security
+   35: </h1>
+   36: 
+   37: <p className="mt-1 text-sm text-slate-400">
+   38: Platform security center
+
+--------------------------------------------------
+FICHIER : C:\Users\PC\ai-tonkeeper\app\buy\page.tsx
+LIGNE   : 130
+STATUS  : ?? BACK PROBABLEMET INACTIF
+
+onClick       = False
+Link          = False
+href          = False
+router.back   = False
+history.back  = False
+
+CONTEXTE :
+  120: };
+  121: return (
+  122: <main className="min-h-screen bg-[#050B18] text-white">
+  123: <div className="max-w-md mx-auto px-5 py-6">
+  124: 
+  125: {/* Header */}
+  126: 
+  127: <div className="flex items-center justify-between mb-6">
+  128: 
+  129: <button className="w-12 h-12 rounded-2xl bg-[#101A2C] border border-slate-800 flex items-center justify-center">
+  130: <ArrowLeft size={22} />
+  131: </button>
+  132: 
+  133: <h1 className="text-2xl font-bold">
+  134: Buy Crypto
+  135: </h1>
+  136: 
+  137: <button className="w-12 h-12 rounded-2xl bg-[#101A2C] border border-slate-800 flex items-center justify-center">
+  138: <CreditCard size={22} />
+  139: </button>
+  140: 
+
+--------------------------------------------------
+FICHIER : C:\Users\PC\ai-tonkeeper\app\copy-trading\page.tsx
+LIGNE   : 28
+STATUS  : NAVIGATION DETECTEE
+
+onClick       = False
+Link          = True
+href          = True
+router.back   = False
+history.back  = False
+
+CONTEXTE :
+   18: <div className="mx-auto w-full max-w-md px-5 py-6 pb-28">
+   19: 
+   20: {/* Header */}
+   21: 
+   22: <div className="mb-8 flex items-center justify-between">
+   23: 
+   24: <Link href="/dashboard">
+   25: 
+   26: <button className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-800 bg-[#101A2C]">
+   27: 
+   28: <ArrowLeft size={22} />
+   29: 
+   30: </button>
+   31: 
+   32: </Link>
+   33: 
+   34: <div className="flex-1 px-3 text-center">
+   35: 
+   36: <h1 className="text-2xl font-bold">
+   37: Copy Trading
+   38: </h1>
+
+--------------------------------------------------
+FICHIER : C:\Users\PC\ai-tonkeeper\app\deposit\page.tsx
+LIGNE   : 612
+STATUS  : NAVIGATION DETECTEE
+
+onClick       = True
+Link          = False
+href          = False
+router.back   = False
+history.back  = False
+
+CONTEXTE :
+  602: 
+  603: <div className="mb-6 flex items-center justify-between">
+  604: <button
+  605: type="button"
+  606: className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-800 bg-[#101A2C]"
+  607: aria-label="Go back"
+  608: onClick={() =>
+  609: window.history.back()
+  610: }
+  611: >
+  612: <ArrowLeft size={20} />
+  613: </button>
+  614: 
+  615: <h1 className="text-2xl font-bold">
+  616: Deposit
+  617: </h1>
+  618: 
+  619: <div className="flex gap-2">
+  620: <button
+  621: type="button"
+  622: className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-800 bg-[#101A2C]"
+
+--------------------------------------------------
+FICHIER : C:\Users\PC\ai-tonkeeper\app\device-management\page.tsx
+LIGNE   : 28
+STATUS  : NAVIGATION DETECTEE
+
+onClick       = False
+Link          = True
+href          = True
+router.back   = False
+history.back  = False
+
+CONTEXTE :
+   18: <div className="mx-auto w-full max-w-md px-5 py-6 pb-28">
+   19: 
+   20: {/* Header */}
+   21: 
+   22: <div className="mb-8 flex items-center justify-between">
+   23: 
+   24: <Link href="/dashboard">
+   25: 
+   26: <button className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-800 bg-[#101A2C]">
+   27: 
+   28: <ArrowLeft size={22} />
+   29: 
+   30: </button>
+   31: 
+   32: </Link>
+   33: 
+   34: <div className="flex-1 px-3 text-center">
+   35: 
+   36: <h1 className="text-2xl font-bold">
+   37: Device Management
+   38: </h1>
+
+--------------------------------------------------
+FICHIER : C:\Users\PC\ai-tonkeeper\app\fiat-history\page.tsx
+LIGNE   : 28
+STATUS  : NAVIGATION DETECTEE
+
+onClick       = False
+Link          = True
+href          = True
+router.back   = False
+history.back  = False
+
+CONTEXTE :
+   18: <div className="mx-auto w-full max-w-md px-5 py-6 pb-28">
+   19: 
+   20: {/* Header */}
+   21: 
+   22: <div className="mb-8 flex items-center justify-between">
+   23: 
+   24: <Link href="/dashboard">
+   25: 
+   26: <button className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-800 bg-[#101A2C]">
+   27: 
+   28: <ArrowLeft size={22} />
+   29: 
+   30: </button>
+   31: 
+   32: </Link>
+   33: 
+   34: <div className="flex-1 px-3 text-center">
+   35: 
+   36: <h1 className="text-2xl font-bold">
+   37: Fiat History
+   38: </h1>
+
+--------------------------------------------------
+FICHIER : C:\Users\PC\ai-tonkeeper\app\help\page.tsx
+LIGNE   : 442
+STATUS  : NAVIGATION DETECTEE
+
+onClick       = True
+Link          = False
+href          = False
+router.back   = False
+history.back  = False
+
+CONTEXTE :
+  432: {/* ================================================== */}
+  433: 
+  434: <div className="mb-8 flex items-center justify-between">
+  435: 
+  436: <button
+  437: type="button"
+  438: onClick={() => router.push("/settings")}
+  439: aria-label={current.back}
+  440: className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-800 bg-[#101A2C] transition hover:bg-[#16233D]"
+  441: >
+  442: <ArrowLeft size={22} />
+  443: </button>
+  444: 
+  445: <div className="text-center">
+  446: <h1 className="text-2xl font-bold">
+  447: {current.title}
+  448: </h1>
+  449: 
+  450: <p className="mt-1 text-sm text-slate-400">
+  451: {current.subtitle}
+  452: </p>
+
+--------------------------------------------------
+FICHIER : C:\Users\PC\ai-tonkeeper\app\help-center\page.tsx
+LIGNE   : 442
+STATUS  : NAVIGATION DETECTEE
+
+onClick       = True
+Link          = False
+href          = False
+router.back   = False
+history.back  = False
+
+CONTEXTE :
+  432: {/* ================================================== */}
+  433: 
+  434: <div className="mb-8 flex items-center justify-between">
+  435: 
+  436: <button
+  437: type="button"
+  438: onClick={() => router.push("/settings")}
+  439: aria-label={current.back}
+  440: className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-800 bg-[#101A2C] transition hover:bg-[#16233D]"
+  441: >
+  442: <ArrowLeft size={22} />
+  443: </button>
+  444: 
+  445: <div className="text-center">
+  446: <h1 className="text-2xl font-bold">
+  447: {current.title}
+  448: </h1>
+  449: 
+  450: <p className="mt-1 text-sm text-slate-400">
+  451: {current.subtitle}
+  452: </p>
+
+--------------------------------------------------
+FICHIER : C:\Users\PC\ai-tonkeeper\app\history\page.tsx
+LIGNE   : 318
+STATUS  : ?? BACK PROBABLEMET INACTIF
+
+onClick       = False
+Link          = False
+href          = False
+router.back   = False
+history.back  = False
+
+CONTEXTE :
+  308: <div className="max-w-md mx-auto px-5 py-6 pb-28">
+  309: 
+  310: {/* Header */}
+  311: 
+  312: <div className="flex items-center justify-between mb-8">
+  313: 
+  314: <button
+  315: type="button"
+  316: className="w-12 h-12 rounded-2xl bg-[#101A2C] border border-slate-800 flex items-center justify-center"
+  317: >
+  318: <ArrowLeft size={22} />
+  319: </button>
+  320: 
+  321: <div className="text-center">
+  322: 
+  323: <h1 className="text-2xl font-bold">
+  324: Transaction History
+  325: </h1>
+  326: 
+  327: <p className="text-sm text-slate-400 mt-1">
+  328: View all wallet activities
+
+--------------------------------------------------
+FICHIER : C:\Users\PC\ai-tonkeeper\app\kyc\page.tsx
+LIGNE   : 1089
+STATUS  : NAVIGATION DETECTEE
+
+onClick       = True
+Link          = False
+href          = False
+router.back   = False
+history.back  = False
+
+CONTEXTE :
+ 1079: {/* HEADER */}
+ 1080: 
+ 1081: <div className="mb-8 flex items-center justify-between gap-3">
+ 1082: <button
+ 1083: type="button"
+ 1084: onClick={() =>
+ 1085: router.back()
+ 1086: }
+ 1087: className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-slate-800 bg-[#101A2C] transition hover:border-cyan-500"
+ 1088: >
+ 1089: <ArrowLeft size={22} />
+ 1090: </button>
+ 1091: 
+ 1092: <h1 className="text-center text-xl font-bold">
+ 1093: Identity Verification
+ 1094: </h1>
+ 1095: 
+ 1096: <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-cyan-500 bg-cyan-500/10">
+ 1097: <ShieldCheck
+ 1098: size={22}
+ 1099: className="text-cyan-400"
+
+--------------------------------------------------
+FICHIER : C:\Users\PC\ai-tonkeeper\app\leaderboard\page.tsx
+LIGNE   : 30
+STATUS  : NAVIGATION DETECTEE
+
+onClick       = False
+Link          = True
+href          = True
+router.back   = False
+history.back  = False
+
+CONTEXTE :
+   20: <div className="max-w-md mx-auto px-5 py-6 pb-28">
+   21: 
+   22: {/* Header */}
+   23: 
+   24: <div className="flex items-center justify-between mb-8">
+   25: 
+   26: <Link href="/dashboard">
+   27: 
+   28: <button className="w-12 h-12 rounded-2xl border border-slate-800 bg-[#101A2C] flex items-center justify-center">
+   29: 
+   30: <ArrowLeft size={22} />
+   31: 
+   32: </button>
+   33: 
+   34: </Link>
+   35: 
+   36: <div className="text-center">
+   37: 
+   38: <h1 className="text-2xl font-bold">
+   39: Leaderboard
+   40: </h1>
+
+--------------------------------------------------
+FICHIER : C:\Users\PC\ai-tonkeeper\app\legal\page.tsx
+LIGNE   : 27
+STATUS  : NAVIGATION DETECTEE
+
+onClick       = False
+Link          = True
+href          = True
+router.back   = False
+history.back  = False
+
+CONTEXTE :
+   17: <div className="mx-auto max-w-md px-5 py-6 pb-28">
+   18: 
+   19: {/* Header */}
+   20: 
+   21: <div className="mb-8 flex items-center justify-between">
+   22: 
+   23: <Link
+   24: href="/admin"
+   25: className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-800 bg-[#101A2C]"
+   26: >
+   27: <ArrowLeft size={22} />
+   28: </Link>
+   29: 
+   30: <div className="text-center">
+   31: 
+   32: <h1 className="text-2xl font-bold">
+   33: Legal
+   34: </h1>
+   35: 
+   36: <p className="mt-1 text-sm text-slate-400">
+   37: Legal & compliance center
+
+--------------------------------------------------
+FICHIER : C:\Users\PC\ai-tonkeeper\app\market\page.tsx
+LIGNE   : 31
+STATUS  : NAVIGATION DETECTEE
+
+onClick       = False
+Link          = True
+href          = True
+router.back   = False
+history.back  = False
+
+CONTEXTE :
+   21: <div className="max-w-md mx-auto px-5 py-6 pb-28">
+   22: 
+   23: {/* Header */}
+   24: 
+   25: <div className="flex items-center justify-between mb-8">
+   26: 
+   27: <Link href="/dashboard">
+   28: 
+   29: <button className="w-12 h-12 rounded-2xl border border-slate-800 bg-[#101A2C] flex items-center justify-center">
+   30: 
+   31: <ArrowLeft size={22} />
+   32: 
+   33: </button>
+   34: 
+   35: </Link>
+   36: 
+   37: <div className="text-center">
+   38: 
+   39: <h1 className="text-2xl font-bold">
+   40: Crypto Market
+   41: </h1>
+
+--------------------------------------------------
+FICHIER : C:\Users\PC\ai-tonkeeper\app\news\page.tsx
+LIGNE   : 30
+STATUS  : NAVIGATION DETECTEE
+
+onClick       = False
+Link          = True
+href          = True
+router.back   = False
+history.back  = False
+
+CONTEXTE :
+   20: <div className="max-w-md mx-auto px-5 py-6 pb-28">
+   21: 
+   22: {/* Header */}
+   23: 
+   24: <div className="flex items-center justify-between mb-8">
+   25: 
+   26: <Link href="/dashboard">
+   27: 
+   28: <button className="w-12 h-12 rounded-2xl border border-slate-800 bg-[#101A2C] flex items-center justify-center">
+   29: 
+   30: <ArrowLeft size={22} />
+   31: 
+   32: </button>
+   33: 
+   34: </Link>
+   35: 
+   36: <div className="text-center">
+   37: 
+   38: <h1 className="text-2xl font-bold">
+   39: Crypto News
+   40: </h1>
+
+--------------------------------------------------
+FICHIER : C:\Users\PC\ai-tonkeeper\app\notifications\page.tsx
+LIGNE   : 340
+STATUS  : NAVIGATION DETECTEE
+
+onClick       = False
+Link          = True
+href          = True
+router.back   = False
+history.back  = False
+
+CONTEXTE :
+  330: {/* ================================================== */}
+  331: {/* HEADER */}
+  332: {/* ================================================== */}
+  333: <div className="mb-8 flex items-center justify-between">
+  334: <Link href="/dashboard">
+  335: <button
+  336: type="button"
+  337: className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-800 bg-[#101A2C]"
+  338: aria-label="Go back"
+  339: >
+  340: <ArrowLeft size={22} />
+  341: </button>
+  342: </Link>
+  343: <div className="text-center">
+  344: <h1 className="text-2xl font-bold">Notifications</h1>
+  345: <p className="mt-1 text-sm text-slate-400">
+  346: Stay updated with your account
+  347: </p>
+  348: </div>
+  349: <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-800 bg-[#101A2C]">
+  350: <Bell size={22} className="text-cyan-400" />
+
+--------------------------------------------------
+FICHIER : C:\Users\PC\ai-tonkeeper\app\portfolio\page.tsx
+LIGNE   : 32
+STATUS  : NAVIGATION DETECTEE
+
+onClick       = False
+Link          = True
+href          = True
+router.back   = False
+history.back  = False
+
+CONTEXTE :
+   22: 
+   23: <div className="mx-auto max-w-md px-5 py-6 pb-28">
+   24: 
+   25: {/* Header */}
+   26: <div className="mb-8 flex items-center justify-between">
+   27: 
+   28: <Link
+   29: href="/dashboard"
+   30: className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-800 bg-[#101A2C]"
+   31: >
+   32: <ArrowLeft size={22} />
+   33: </Link>
+   34: 
+   35: <div className="text-center">
+   36: 
+   37: <h1 className="text-2xl font-bold">
+   38: Portfolio
+   39: </h1>
+   40: 
+   41: <p className="mt-1 text-sm text-slate-400">
+   42: Manage all your crypto assets
+
+--------------------------------------------------
+FICHIER : C:\Users\PC\ai-tonkeeper\app\price-alerts\page.tsx
+LIGNE   : 30
+STATUS  : NAVIGATION DETECTEE
+
+onClick       = False
+Link          = True
+href          = True
+router.back   = False
+history.back  = False
+
+CONTEXTE :
+   20: <div className="max-w-md mx-auto px-5 py-6 pb-28">
+   21: 
+   22: {/* Header */}
+   23: 
+   24: <div className="flex items-center justify-between mb-8">
+   25: 
+   26: <Link href="/dashboard">
+   27: 
+   28: <button className="w-12 h-12 rounded-2xl border border-slate-800 bg-[#101A2C] flex items-center justify-center">
+   29: 
+   30: <ArrowLeft size={22} />
+   31: 
+   32: </button>
+   33: 
+   34: </Link>
+   35: 
+   36: <div className="text-center">
+   37: 
+   38: <h1 className="text-2xl font-bold">
+   39: Price Alerts
+   40: </h1>
+
+--------------------------------------------------
+FICHIER : C:\Users\PC\ai-tonkeeper\app\privacy\page.tsx
+LIGNE   : 475
+STATUS  : NAVIGATION DETECTEE
+
+onClick       = True
+Link          = False
+href          = False
+router.back   = False
+history.back  = False
+
+CONTEXTE :
+  465: <div className="mx-auto max-w-md px-5 py-6">
+  466: {/* HEADER */}
+  467: 
+  468: <div className="mb-8 flex items-center justify-between">
+  469: <button
+  470: type="button"
+  471: onClick={() => router.back()}
+  472: aria-label={current.back}
+  473: className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-800 bg-[#101A2C] transition hover:bg-[#16233D]"
+  474: >
+  475: <ArrowLeft size={22} />
+  476: </button>
+  477: 
+  478: <div className="text-center">
+  479: <h1 className="text-2xl font-bold">
+  480: {current.title}
+  481: </h1>
+  482: 
+  483: <p className="mt-1 text-sm text-slate-400">
+  484: {current.subtitle}
+  485: </p>
+
+--------------------------------------------------
+FICHIER : C:\Users\PC\ai-tonkeeper\app\privacy\page.tsx
+LIGNE   : 610
+STATUS  : NAVIGATION DETECTEE
+
+onClick       = True
+Link          = False
+href          = False
+router.back   = False
+history.back  = False
+
+CONTEXTE :
+  600: <UserCircle
+  601: size={22}
+  602: className="text-cyan-400"
+  603: />
+  604: 
+  605: <span className="font-medium">
+  606: {current.profile}
+  607: </span>
+  608: </div>
+  609: 
+  610: <ArrowLeft
+  611: size={19}
+  612: className="rotate-180 text-slate-500"
+  613: />
+  614: </button>
+  615: 
+  616: <button
+  617: type="button"
+  618: onClick={() => router.push("/settings")}
+  619: className="flex w-full items-center justify-between px-5 py-5 text-left transition hover:bg-[#16233D]"
+  620: >
+
+--------------------------------------------------
+FICHIER : C:\Users\PC\ai-tonkeeper\app\privacy\page.tsx
+LIGNE   : 632
+STATUS  : ?? BACK PROBABLEMET INACTIF
+
+onClick       = False
+Link          = False
+href          = False
+router.back   = False
+history.back  = False
+
+CONTEXTE :
+  622: <ShieldCheck
+  623: size={22}
+  624: className="text-green-400"
+  625: />
+  626: 
+  627: <span className="font-medium">
+  628: {current.settings}
+  629: </span>
+  630: </div>
+  631: 
+  632: <ArrowLeft
+  633: size={19}
+  634: className="rotate-180 text-slate-500"
+  635: />
+  636: </button>
+  637: </div>
+  638: 
+  639: {/* FOOTER */}
+  640: 
+  641: <footer className="mt-10 border-t border-slate-800 pt-6 text-center">
+  642: <p className="text-sm text-slate-500">
+
+--------------------------------------------------
+FICHIER : C:\Users\PC\ai-tonkeeper\app\profile\page.tsx
+LIGNE   : 229
+STATUS  : NAVIGATION DETECTEE
+
+onClick       = False
+Link          = True
+href          = True
+router.back   = False
+history.back  = False
+
+CONTEXTE :
+  219: {/* =========================
+  220: HEADER
+  221: ========================== */}
+  222: 
+  223: <div className="flex items-center justify-between mb-8">
+  224: 
+  225: <Link
+  226: href="/dashboard"
+  227: className="w-12 h-12 rounded-2xl bg-[#101A2C] border border-slate-800 flex items-center justify-center"
+  228: >
+  229: <ArrowLeft size={22} />
+  230: </Link>
+  231: 
+  232: <h1 className="text-2xl font-bold">
+  233: Profile
+  234: </h1>
+  235: 
+  236: <button
+  237: type="button"
+  238: className="w-12 h-12 rounded-2xl bg-[#101A2C] border border-slate-800 flex items-center justify-center"
+  239: >
+
+--------------------------------------------------
+FICHIER : C:\Users\PC\ai-tonkeeper\app\recovery-phrase\page.tsx
+LIGNE   : 28
+STATUS  : NAVIGATION DETECTEE
+
+onClick       = False
+Link          = True
+href          = True
+router.back   = False
+history.back  = False
+
+CONTEXTE :
+   18: <div className="mx-auto w-full max-w-md px-5 py-6 pb-28">
+   19: 
+   20: {/* Header */}
+   21: 
+   22: <div className="mb-8 flex items-center justify-between">
+   23: 
+   24: <Link href="/dashboard">
+   25: 
+   26: <button className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-800 bg-[#101A2C]">
+   27: 
+   28: <ArrowLeft size={22} />
+   29: 
+   30: </button>
+   31: 
+   32: </Link>
+   33: 
+   34: <div className="flex-1 px-3 text-center">
+   35: 
+   36: <h1 className="text-2xl font-bold">
+   37: Recovery Phrase
+   38: </h1>
+
+--------------------------------------------------
+FICHIER : C:\Users\PC\ai-tonkeeper\app\referral\page.tsx
+LIGNE   : 31
+STATUS  : NAVIGATION DETECTEE
+
+onClick       = False
+Link          = True
+href          = True
+router.back   = False
+history.back  = False
+
+CONTEXTE :
+   21: <div className="max-w-md mx-auto px-5 py-6 pb-28">
+   22: 
+   23: {/* Header */}
+   24: 
+   25: <div className="flex items-center justify-between mb-8">
+   26: 
+   27: <Link href="/dashboard">
+   28: 
+   29: <button className="w-12 h-12 rounded-2xl bg-[#101A2C] border border-slate-800 flex items-center justify-center">
+   30: 
+   31: <ArrowLeft size={22} />
+   32: 
+   33: </button>
+   34: 
+   35: </Link>
+   36: 
+   37: <div className="text-center">
+   38: 
+   39: <h1 className="text-2xl font-bold">
+   40: Referral Program
+   41: </h1>
+
+--------------------------------------------------
+FICHIER : C:\Users\PC\ai-tonkeeper\app\rewards\page.tsx
+LIGNE   : 32
+STATUS  : NAVIGATION DETECTEE
+
+onClick       = False
+Link          = True
+href          = True
+router.back   = False
+history.back  = False
+
+CONTEXTE :
+   22: <div className="max-w-md mx-auto px-5 py-6 pb-28">
+   23: 
+   24: {/* Header */}
+   25: 
+   26: <div className="flex items-center justify-between mb-8">
+   27: 
+   28: <Link href="/dashboard">
+   29: 
+   30: <button className="w-12 h-12 rounded-2xl border border-slate-800 bg-[#101A2C] flex items-center justify-center">
+   31: 
+   32: <ArrowLeft size={22} />
+   33: 
+   34: </button>
+   35: 
+   36: </Link>
+   37: 
+   38: <div className="text-center">
+   39: 
+   40: <h1 className="text-2xl font-bold">
+   41: Rewards
+   42: </h1>
+
+--------------------------------------------------
+FICHIER : C:\Users\PC\ai-tonkeeper\app\security\page.tsx
+LIGNE   : 1003
+STATUS  : NAVIGATION DETECTEE
+
+onClick       = False
+Link          = True
+href          = True
+router.back   = False
+history.back  = False
+
+CONTEXTE :
+  993: <div className="max-w-md mx-auto px-5 py-6 pb-28">
+  994: 
+  995: {/* HEADER */}
+  996: 
+  997: <div className="flex items-center justify-between mb-8">
+  998: <Link href="/settings">
+  999: <button
+ 1000: type="button"
+ 1001: className="w-12 h-12 rounded-2xl border border-slate-800 bg-[#101A2C] flex items-center justify-center"
+ 1002: >
+ 1003: <ArrowLeft size={22} />
+ 1004: </button>
+ 1005: </Link>
+ 1006: 
+ 1007: <div className="text-center">
+ 1008: <h1 className="text-2xl font-bold">
+ 1009: Security Center
+ 1010: </h1>
+ 1011: 
+ 1012: <p className="mt-1 text-sm text-slate-400">
+ 1013: Protect your AI TONKEEPER account
+
+--------------------------------------------------
+FICHIER : C:\Users\PC\ai-tonkeeper\app\send\page.tsx
+LIGNE   : 604
+STATUS  : ?? BACK PROBABLEMET INACTIF
+
+onClick       = False
+Link          = False
+href          = False
+router.back   = False
+history.back  = False
+
+CONTEXTE :
+  594: <div className="max-w-md mx-auto px-5 py-6">
+  595: 
+  596: {/* HEADER */}
+  597: 
+  598: <div className="flex items-center justify-between mb-8">
+  599: 
+  600: <button
+  601: type="button"
+  602: className="w-12 h-12 rounded-2xl bg-[#101A2C] border border-slate-800 flex items-center justify-center"
+  603: >
+  604: <ArrowLeft size={24} />
+  605: </button>
+  606: 
+  607: <h1 className="text-3xl font-bold">
+  608: Send
+  609: </h1>
+  610: 
+  611: <button
+  612: type="button"
+  613: className="w-12 h-12 rounded-2xl bg-[#101A2C] border border-slate-800 flex items-center justify-center"
+  614: >
+
+--------------------------------------------------
+FICHIER : C:\Users\PC\ai-tonkeeper\app\settings\page.tsx
+LIGNE   : 460
+STATUS  : NAVIGATION DETECTEE
+
+onClick       = True
+Link          = False
+href          = False
+router.back   = False
+history.back  = False
+
+CONTEXTE :
+  450: {/* ================================================== */}
+  451: 
+  452: <div className="flex items-center justify-between mb-8">
+  453: 
+  454: <button
+  455: type="button"
+  456: onClick={() => router.back()}
+  457: className="w-12 h-12 rounded-2xl bg-[#101A2C] border border-slate-800 flex items-center justify-center hover:bg-[#16233D] transition"
+  458: aria-label={t.settings}
+  459: >
+  460: <ArrowLeft size={22} />
+  461: </button>
+  462: 
+  463: <h1 className="text-2xl font-bold">
+  464: {t.settings}
+  465: </h1>
+  466: 
+  467: <button
+  468: type="button"
+  469: onClick={() => router.push("/notifications")}
+  470: className="relative w-12 h-12 rounded-2xl bg-[#101A2C] border border-slate-800 flex items-center justify-center"
+
+--------------------------------------------------
+FICHIER : C:\Users\PC\ai-tonkeeper\app\staking\page.tsx
+LIGNE   : 31
+STATUS  : NAVIGATION DETECTEE
+
+onClick       = False
+Link          = True
+href          = True
+router.back   = False
+history.back  = False
+
+CONTEXTE :
+   21: <div className="max-w-md mx-auto px-5 py-6 pb-28">
+   22: 
+   23: {/* Header */}
+   24: 
+   25: <div className="flex items-center justify-between mb-8">
+   26: 
+   27: <Link href="/dashboard">
+   28: 
+   29: <button className="w-12 h-12 rounded-2xl border border-slate-800 bg-[#101A2C] flex items-center justify-center">
+   30: 
+   31: <ArrowLeft size={22} />
+   32: 
+   33: </button>
+   34: 
+   35: </Link>
+   36: 
+   37: <div className="text-center">
+   38: 
+   39: <h1 className="text-2xl font-bold">
+   40: Staking
+   41: </h1>
+
+--------------------------------------------------
+FICHIER : C:\Users\PC\ai-tonkeeper\app\subscription\page.tsx
+LIGNE   : 27
+STATUS  : NAVIGATION DETECTEE
+
+onClick       = False
+Link          = True
+href          = True
+router.back   = False
+history.back  = False
+
+CONTEXTE :
+   17: <div className="mx-auto max-w-md px-5 py-6 pb-28">
+   18: 
+   19: {/* Header */}
+   20: 
+   21: <div className="mb-8 flex items-center justify-between">
+   22: 
+   23: <Link
+   24: href="/admin"
+   25: className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-800 bg-[#101A2C]"
+   26: >
+   27: <ArrowLeft size={22} />
+   28: </Link>
+   29: 
+   30: <div className="text-center">
+   31: 
+   32: <h1 className="text-2xl font-bold">
+   33: Subscription
+   34: </h1>
+   35: 
+   36: <p className="mt-1 text-sm text-slate-400">
+   37: AI TONKEEPER subscription management
+
+--------------------------------------------------
+FICHIER : C:\Users\PC\ai-tonkeeper\app\support\page.tsx
+LIGNE   : 32
+STATUS  : NAVIGATION DETECTEE
+
+onClick       = False
+Link          = True
+href          = True
+router.back   = False
+history.back  = False
+
+CONTEXTE :
+   22: <div className="max-w-md mx-auto px-5 py-6 pb-28">
+   23: 
+   24: {/* Header */}
+   25: 
+   26: <div className="flex items-center justify-between mb-8">
+   27: 
+   28: <Link href="/dashboard">
+   29: 
+   30: <button className="w-12 h-12 rounded-2xl bg-[#101A2C] border border-slate-800 flex items-center justify-center">
+   31: 
+   32: <ArrowLeft size={22} />
+   33: 
+   34: </button>
+   35: 
+   36: </Link>
+   37: 
+   38: <div className="text-center">
+   39: 
+   40: <h1 className="text-2xl font-bold">
+   41: Support Center
+   42: </h1>
+
+--------------------------------------------------
+FICHIER : C:\Users\PC\ai-tonkeeper\app\swap\page.tsx
+LIGNE   : 266
+STATUS  : NAVIGATION DETECTEE
+
+onClick       = True
+Link          = False
+href          = False
+router.back   = False
+history.back  = False
+
+CONTEXTE :
+  256: return (
+  257: <main className="min-h-screen bg-[#050B18] text-white">
+  258: <div className="max-w-md mx-auto px-5 py-6">
+  259: {/* Header */}
+  260: 
+  261: <div className="flex items-center justify-between mb-6">
+  262: <button
+  263: type="button"
+  264: className="w-12 h-12 rounded-2xl bg-[#101A2C] border border-slate-800 flex items-center justify-center"
+  265: >
+  266: <ArrowLeft size={22} />
+  267: </button>
+  268: 
+  269: <h1 className="text-2xl font-bold">Swap Crypto</h1>
+  270: 
+  271: <button
+  272: type="button"
+  273: onClick={loadRate}
+  274: disabled={loadingRate}
+  275: className="w-12 h-12 rounded-2xl bg-[#101A2C] border border-slate-800 flex items-center justify-center"
+  276: >
+
+--------------------------------------------------
+FICHIER : C:\Users\PC\ai-tonkeeper\app\system-status\page.tsx
+LIGNE   : 28
+STATUS  : NAVIGATION DETECTEE
+
+onClick       = False
+Link          = True
+href          = True
+router.back   = False
+history.back  = False
+
+CONTEXTE :
+   18: <div className="mx-auto max-w-md px-5 py-6 pb-28">
+   19: 
+   20: {/* Header */}
+   21: 
+   22: <div className="mb-8 flex items-center justify-between">
+   23: 
+   24: <Link
+   25: href="/admin"
+   26: className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-800 bg-[#101A2C]"
+   27: >
+   28: <ArrowLeft size={22} />
+   29: </Link>
+   30: 
+   31: <div className="text-center">
+   32: 
+   33: <h1 className="text-2xl font-bold">
+   34: System Status
+   35: </h1>
+   36: 
+   37: <p className="mt-1 text-sm text-slate-400">
+   38: AI TONKEEPER infrastructure
+
+--------------------------------------------------
+FICHIER : C:\Users\PC\ai-tonkeeper\app\tax-reports\page.tsx
+LIGNE   : 28
+STATUS  : NAVIGATION DETECTEE
+
+onClick       = False
+Link          = True
+href          = True
+router.back   = False
+history.back  = False
+
+CONTEXTE :
+   18: <div className="mx-auto max-w-md px-5 py-6 pb-28">
+   19: 
+   20: {/* Header */}
+   21: 
+   22: <div className="mb-8 flex items-center justify-between">
+   23: 
+   24: <Link
+   25: href="/admin"
+   26: className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-800 bg-[#101A2C]"
+   27: >
+   28: <ArrowLeft size={22} />
+   29: </Link>
+   30: 
+   31: <div className="text-center">
+   32: 
+   33: <h1 className="text-2xl font-bold">
+   34: Tax Reports
+   35: </h1>
+   36: 
+   37: <p className="mt-1 text-sm text-slate-400">
+   38: Tax reports & financial records
+
+--------------------------------------------------
+FICHIER : C:\Users\PC\ai-tonkeeper\app\terms\page.tsx
+LIGNE   : 409
+STATUS  : NAVIGATION DETECTEE
+
+onClick       = True
+Link          = False
+href          = False
+router.back   = False
+history.back  = False
+
+CONTEXTE :
+  399: <div className="mx-auto max-w-md px-5 py-6">
+  400: {/* HEADER */}
+  401: 
+  402: <div className="mb-8 flex items-center justify-between">
+  403: <button
+  404: type="button"
+  405: onClick={() => router.back()}
+  406: aria-label={current.back}
+  407: className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-800 bg-[#101A2C] transition hover:bg-[#16233D]"
+  408: >
+  409: <ArrowLeft size={22} />
+  410: </button>
+  411: 
+  412: <div className="text-center">
+  413: <h1 className="text-2xl font-bold">
+  414: {current.title}
+  415: </h1>
+  416: 
+  417: <p className="mt-1 text-sm text-slate-400">
+  418: {current.subtitle}
+  419: </p>
+
+--------------------------------------------------
+FICHIER : C:\Users\PC\ai-tonkeeper\app\terms\page.tsx
+LIGNE   : 544
+STATUS  : NAVIGATION DETECTEE
+
+onClick       = True
+Link          = False
+href          = False
+router.back   = False
+history.back  = False
+
+CONTEXTE :
+  534: <UserCircle
+  535: size={22}
+  536: className="text-cyan-400"
+  537: />
+  538: 
+  539: <span className="font-medium">
+  540: {current.profile}
+  541: </span>
+  542: </div>
+  543: 
+  544: <ArrowLeft
+  545: size={19}
+  546: className="rotate-180 text-slate-500"
+  547: />
+  548: </button>
+  549: 
+  550: <button
+  551: type="button"
+  552: onClick={() => router.push("/settings")}
+  553: className="flex w-full items-center justify-between px-5 py-5 text-left transition hover:bg-[#16233D]"
+  554: >
+
+--------------------------------------------------
+FICHIER : C:\Users\PC\ai-tonkeeper\app\terms\page.tsx
+LIGNE   : 566
+STATUS  : ?? BACK PROBABLEMET INACTIF
+
+onClick       = False
+Link          = False
+href          = False
+router.back   = False
+history.back  = False
+
+CONTEXTE :
+  556: <ShieldCheck
+  557: size={22}
+  558: className="text-green-400"
+  559: />
+  560: 
+  561: <span className="font-medium">
+  562: {current.settings}
+  563: </span>
+  564: </div>
+  565: 
+  566: <ArrowLeft
+  567: size={19}
+  568: className="rotate-180 text-slate-500"
+  569: />
+  570: </button>
+  571: </div>
+  572: 
+  573: {/* FOOTER */}
+  574: 
+  575: <footer className="mt-10 border-t border-slate-800 pt-6 text-center">
+  576: <p className="text-sm text-slate-500">
+
+--------------------------------------------------
+FICHIER : C:\Users\PC\ai-tonkeeper\app\trading-competitions\page.tsx
+LIGNE   : 28
+STATUS  : NAVIGATION DETECTEE
+
+onClick       = False
+Link          = True
+href          = True
+router.back   = False
+history.back  = False
+
+CONTEXTE :
+   18: <div className="mx-auto w-full max-w-md px-5 py-6 pb-28">
+   19: 
+   20: {/* Header */}
+   21: 
+   22: <div className="mb-8 flex items-center justify-between">
+   23: 
+   24: <Link href="/dashboard">
+   25: 
+   26: <button className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-800 bg-[#101A2C]">
+   27: 
+   28: <ArrowLeft size={22} />
+   29: 
+   30: </button>
+   31: 
+   32: </Link>
+   33: 
+   34: <div className="flex-1 px-3 text-center">
+   35: 
+   36: <h1 className="text-2xl font-bold">
+   37: Trading Competitions
+   38: </h1>
+
+--------------------------------------------------
+FICHIER : C:\Users\PC\ai-tonkeeper\app\transactions\page.tsx
+LIGNE   : 30
+STATUS  : NAVIGATION DETECTEE
+
+onClick       = False
+Link          = True
+href          = True
+router.back   = False
+history.back  = False
+
+CONTEXTE :
+   20: <div className="max-w-md mx-auto px-5 py-6 pb-28">
+   21: 
+   22: {/* Header */}
+   23: 
+   24: <div className="flex items-center justify-between mb-8">
+   25: 
+   26: <Link href="/dashboard">
+   27: 
+   28: <button className="w-12 h-12 rounded-2xl border border-slate-800 bg-[#101A2C] flex items-center justify-center">
+   29: 
+   30: <ArrowLeft size={22} />
+   31: 
+   32: </button>
+   33: 
+   34: </Link>
+   35: 
+   36: <div className="text-center">
+   37: 
+   38: <h1 className="text-2xl font-bold">
+   39: Transactions
+   40: </h1>
+
+--------------------------------------------------
+FICHIER : C:\Users\PC\ai-tonkeeper\app\user-management\page.tsx
+LIGNE   : 29
+STATUS  : NAVIGATION DETECTEE
+
+onClick       = False
+Link          = True
+href          = True
+router.back   = False
+history.back  = False
+
+CONTEXTE :
+   19: <div className="mx-auto max-w-md px-5 py-6 pb-28">
+   20: 
+   21: {/* Header */}
+   22: 
+   23: <div className="mb-8 flex items-center justify-between">
+   24: 
+   25: <Link
+   26: href="/admin"
+   27: className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-800 bg-[#101A2C]"
+   28: >
+   29: <ArrowLeft size={22} />
+   30: </Link>
+   31: 
+   32: <div className="text-center">
+   33: 
+   34: <h1 className="text-2xl font-bold">
+   35: User Management
+   36: </h1>
+   37: 
+   38: <p className="mt-1 text-sm text-slate-400">
+   39: Manage AI TONKEEPER users
+
+--------------------------------------------------
+FICHIER : C:\Users\PC\ai-tonkeeper\app\wallet-backup\page.tsx
+LIGNE   : 28
+STATUS  : NAVIGATION DETECTEE
+
+onClick       = False
+Link          = True
+href          = True
+router.back   = False
+history.back  = False
+
+CONTEXTE :
+   18: <div className="mx-auto w-full max-w-md px-5 py-6 pb-28">
+   19: 
+   20: {/* Header */}
+   21: 
+   22: <div className="mb-8 flex items-center justify-between">
+   23: 
+   24: <Link href="/dashboard">
+   25: 
+   26: <button className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-800 bg-[#101A2C]">
+   27: 
+   28: <ArrowLeft size={22} />
+   29: 
+   30: </button>
+   31: 
+   32: </Link>
+   33: 
+   34: <div className="flex-1 px-3 text-center">
+   35: 
+   36: <h1 className="text-2xl font-bold">
+   37: Wallet Backup
+   38: </h1>
+
+--------------------------------------------------
+FICHIER : C:\Users\PC\ai-tonkeeper\app\watchlist\page.tsx
+LIGNE   : 32
+STATUS  : NAVIGATION DETECTEE
+
+onClick       = False
+Link          = True
+href          = True
+router.back   = False
+history.back  = False
+
+CONTEXTE :
+   22: <div className="max-w-md mx-auto px-5 py-6 pb-28">
+   23: 
+   24: {/* Header */}
+   25: 
+   26: <div className="flex items-center justify-between mb-8">
+   27: 
+   28: <Link href="/dashboard">
+   29: 
+   30: <button className="w-12 h-12 rounded-2xl border border-slate-800 bg-[#101A2C] flex items-center justify-center">
+   31: 
+   32: <ArrowLeft size={22} />
+   33: 
+   34: </button>
+   35: 
+   36: </Link>
+   37: 
+   38: <div className="text-center">
+   39: 
+   40: <h1 className="text-2xl font-bold">
+   41: Watchlist
+   42: </h1>

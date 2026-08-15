@@ -1,0 +1,1147 @@
+==================================================
+       AI TONKEEPER - AUDIT NAVIGATION COMPLET
+==================================================
+
+========== 1. TOUTES LES ROUTES ==========
+/ -> C:\Users\PC\ai-tonkeeper\app\page.tsx
+/about -> C:\Users\PC\ai-tonkeeper\app\about\page.tsx
+/achievements -> C:\Users\PC\ai-tonkeeper\app\achievements\page.tsx
+/activity-log -> C:\Users\PC\ai-tonkeeper\app\activity-log\page.tsx
+/admin -> C:\Users\PC\ai-tonkeeper\app\admin\page.tsx
+/admin/kyc -> C:\Users\PC\ai-tonkeeper\app\admin\kyc\page.tsx
+/admin/kyc/[applicationId] -> C:\Users\PC\ai-tonkeeper\app\admin\kyc\[applicationId]\page.tsx
+/admin/send -> C:\Users\PC\ai-tonkeeper\app\admin\send\page.tsx
+/admin/swap -> C:\Users\PC\ai-tonkeeper\app\admin\swap\page.tsx
+/ai-bots -> C:\Users\PC\ai-tonkeeper\app\ai-bots\page.tsx
+/ai-insights -> C:\Users\PC\ai-tonkeeper\app\ai-insights\page.tsx
+/ai-portfolio-manager -> C:\Users\PC\ai-tonkeeper\app\ai-portfolio-manager\page.tsx
+/ai-signals -> C:\Users\PC\ai-tonkeeper\app\ai-signals\page.tsx
+/ai-trade -> C:\Users\PC\ai-tonkeeper\app\ai-trade\page.tsx
+/ai-trade/settings -> C:\Users\PC\ai-tonkeeper\app\ai-trade\settings\page.tsx
+/ai-trading-journal -> C:\Users\PC\ai-tonkeeper\app\ai-trading-journal\page.tsx
+/analytics -> C:\Users\PC\ai-tonkeeper\app\analytics\page.tsx
+/app-settings -> C:\Users\PC\ai-tonkeeper\app\app-settings\page.tsx
+/assistant -> C:\Users\PC\ai-tonkeeper\app\assistant\page.tsx
+/audit-security -> C:\Users\PC\ai-tonkeeper\app\audit-security\page.tsx
+/buy -> C:\Users\PC\ai-tonkeeper\app\buy\page.tsx
+/copy-trading -> C:\Users\PC\ai-tonkeeper\app\copy-trading\page.tsx
+/dashboard -> C:\Users\PC\ai-tonkeeper\app\dashboard\page.tsx
+/deposit -> C:\Users\PC\ai-tonkeeper\app\deposit\page.tsx
+/device-management -> C:\Users\PC\ai-tonkeeper\app\device-management\page.tsx
+/fiat-history -> C:\Users\PC\ai-tonkeeper\app\fiat-history\page.tsx
+/forgot-password -> C:\Users\PC\ai-tonkeeper\app\forgot-password\page.tsx
+/forgot-password/reset -> C:\Users\PC\ai-tonkeeper\app\forgot-password\reset\page.tsx
+/forgot-password/verify -> C:\Users\PC\ai-tonkeeper\app\forgot-password\verify\page.tsx
+/help -> C:\Users\PC\ai-tonkeeper\app\help\page.tsx
+/help-center -> C:\Users\PC\ai-tonkeeper\app\help-center\page.tsx
+/history -> C:\Users\PC\ai-tonkeeper\app\history\page.tsx
+/kyc -> C:\Users\PC\ai-tonkeeper\app\kyc\page.tsx
+/leaderboard -> C:\Users\PC\ai-tonkeeper\app\leaderboard\page.tsx
+/legal -> C:\Users\PC\ai-tonkeeper\app\legal\page.tsx
+/login -> C:\Users\PC\ai-tonkeeper\app\login\page.tsx
+/login/verify -> C:\Users\PC\ai-tonkeeper\app\login\verify\page.tsx
+/market -> C:\Users\PC\ai-tonkeeper\app\market\page.tsx
+/new-password -> C:\Users\PC\ai-tonkeeper\app\new-password\page.tsx
+/news -> C:\Users\PC\ai-tonkeeper\app\news\page.tsx
+/notifications -> C:\Users\PC\ai-tonkeeper\app\notifications\page.tsx
+/portfolio -> C:\Users\PC\ai-tonkeeper\app\portfolio\page.tsx
+/price-alerts -> C:\Users\PC\ai-tonkeeper\app\price-alerts\page.tsx
+/privacy -> C:\Users\PC\ai-tonkeeper\app\privacy\page.tsx
+/profile -> C:\Users\PC\ai-tonkeeper\app\profile\page.tsx
+/recovery-phrase -> C:\Users\PC\ai-tonkeeper\app\recovery-phrase\page.tsx
+/referral -> C:\Users\PC\ai-tonkeeper\app\referral\page.tsx
+/register -> C:\Users\PC\ai-tonkeeper\app\register\page.tsx
+/rewards -> C:\Users\PC\ai-tonkeeper\app\rewards\page.tsx
+/security -> C:\Users\PC\ai-tonkeeper\app\security\page.tsx
+/send -> C:\Users\PC\ai-tonkeeper\app\send\page.tsx
+/settings -> C:\Users\PC\ai-tonkeeper\app\settings\page.tsx
+/staking -> C:\Users\PC\ai-tonkeeper\app\staking\page.tsx
+/subscription -> C:\Users\PC\ai-tonkeeper\app\subscription\page.tsx
+/support -> C:\Users\PC\ai-tonkeeper\app\support\page.tsx
+/swap -> C:\Users\PC\ai-tonkeeper\app\swap\page.tsx
+/system-status -> C:\Users\PC\ai-tonkeeper\app\system-status\page.tsx
+/tax-reports -> C:\Users\PC\ai-tonkeeper\app\tax-reports\page.tsx
+/terms -> C:\Users\PC\ai-tonkeeper\app\terms\page.tsx
+/trading-competitions -> C:\Users\PC\ai-tonkeeper\app\trading-competitions\page.tsx
+/transactions -> C:\Users\PC\ai-tonkeeper\app\transactions\page.tsx
+/user-management -> C:\Users\PC\ai-tonkeeper\app\user-management\page.tsx
+/verification -> C:\Users\PC\ai-tonkeeper\app\verification\page.tsx
+/wallet-backup -> C:\Users\PC\ai-tonkeeper\app\wallet-backup\page.tsx
+/watchlist -> C:\Users\PC\ai-tonkeeper\app\watchlist\page.tsx
+/withdraw -> C:\Users\PC\ai-tonkeeper\app\withdraw\page.tsx
+
+========== 2. ARROWLEFT / CONTEXTE BACK ==========
+
+C:\Users\PC\ai-tonkeeper\app\about\page.tsx:262
+  type="button"
+  onClick={() => router.back()}
+  aria-label={current.back}
+  className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-800 bg-[#101A2C] transition hover:bg-[#16233D]"
+  >
+  <ArrowLeft size={22} />
+  </button>
+  
+  <div className="text-center">
+  <h1 className="text-xl font-bold">
+  {current.title}
+  </h1>
+  
+  <p className="mt-1 text-xs text-slate-400">
+
+C:\Users\PC\ai-tonkeeper\app\achievements\page.tsx:30
+  
+  <Link href="/dashboard">
+  
+  <button className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-800 bg-[#101A2C]">
+  
+  <ArrowLeft size={22} />
+  
+  </button>
+  
+  </Link>
+  
+  <div className="flex-1 px-3 text-center">
+  
+  <h1 className="text-2xl font-bold">
+
+C:\Users\PC\ai-tonkeeper\app\activity-log\page.tsx:25
+  <div className="mb-8 flex items-center justify-between">
+  <Link
+  href="/admin"
+  className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-800 bg-[#101A2C]"
+  >
+  <ArrowLeft size={22} />
+  </Link>
+  
+  <div className="text-center">
+  <h1 className="text-2xl font-bold">
+  Activity Log
+  </h1>
+  
+  <p className="mt-1 text-sm text-slate-400">
+
+C:\Users\PC\ai-tonkeeper\app\admin\page.tsx:30
+  <div className="mb-6 flex items-center justify-between">
+  <Link
+  href="/dashboard"
+  className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-800 bg-[#101A2C] transition hover:border-cyan-500"
+  >
+  <ArrowLeft size={20} />
+  </Link>
+  
+  <div className="text-center">
+  <h1 className="text-2xl font-bold">
+  Admin Dashboard
+  </h1>
+  
+  <p className="text-sm text-gray-400">
+
+C:\Users\PC\ai-tonkeeper\app\ai-bots\page.tsx:30
+  
+  <Link href="/dashboard">
+  
+  <button className="w-12 h-12 rounded-2xl border border-slate-800 bg-[#101A2C] flex items-center justify-center">
+  
+  <ArrowLeft size={22} />
+  
+  </button>
+  
+  </Link>
+  
+  <div className="text-center">
+  
+  <h1 className="text-2xl font-bold">
+
+C:\Users\PC\ai-tonkeeper\app\ai-insights\page.tsx:28
+  
+  <Link href="/dashboard">
+  
+  <button className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-800 bg-[#101A2C]">
+  
+  <ArrowLeft size={22} />
+  
+  </button>
+  
+  </Link>
+  
+  <div className="flex-1 px-3 text-center">
+  
+  <h1 className="text-2xl font-bold">
+
+C:\Users\PC\ai-tonkeeper\app\ai-portfolio-manager\page.tsx:28
+  
+  <Link href="/dashboard">
+  
+  <button className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-800 bg-[#101A2C]">
+  
+  <ArrowLeft size={22} />
+  
+  </button>
+  
+  </Link>
+  
+  <div className="flex-1 px-3 text-center">
+  
+  <h1 className="text-2xl font-bold">
+
+C:\Users\PC\ai-tonkeeper\app\ai-signals\page.tsx:28
+  
+  <Link href="/dashboard">
+  
+  <button className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-800 bg-[#101A2C]">
+  
+  <ArrowLeft size={22} />
+  
+  </button>
+  
+  </Link>
+  
+  <div className="flex-1 px-3 text-center">
+  
+  <h1 className="text-2xl font-bold">
+
+C:\Users\PC\ai-tonkeeper\app\ai-trade\page.tsx:745
+  onClick={() =>
+  window.history.back()
+  }
+  className="w-11 h-11 rounded-full bg-[#101A2C] border border-slate-800 flex items-center justify-center hover:bg-[#16233D] transition"
+  >
+  <ArrowLeft size={20} />
+  </button>
+  
+  <div className="text-center">
+  <h1 className="text-2xl font-bold">
+  AI Trade
+  </h1>
+  
+  <p className="text-sm text-cyan-400">
+
+C:\Users\PC\ai-tonkeeper\app\ai-trade\settings\page.tsx:161
+  <div className="flex items-center justify-between mb-8">
+  <button
+  onClick={() => router.back()}
+  className="w-12 h-12 rounded-2xl bg-[#101A2C] border border-slate-800 flex items-center justify-center"
+  >
+  <ArrowLeft size={22} />
+  </button>
+  <div className="text-center">
+  <h1 className="text-2xl font-bold">
+  AI Trade Settings
+  </h1>
+  <p className="text-sm text-cyan-400 mt-1">
+  Configure your AI trading engine
+  </p>
+
+C:\Users\PC\ai-tonkeeper\app\ai-trading-journal\page.tsx:28
+  
+  <Link href="/dashboard">
+  
+  <button className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-800 bg-[#101A2C]">
+  
+  <ArrowLeft size={22} />
+  
+  </button>
+  
+  </Link>
+  
+  <div className="flex-1 px-3 text-center">
+  
+  <h1 className="text-2xl font-bold">
+
+C:\Users\PC\ai-tonkeeper\app\analytics\page.tsx:30
+  
+  <Link href="/dashboard">
+  
+  <button className="w-12 h-12 rounded-2xl border border-slate-800 bg-[#101A2C] flex items-center justify-center">
+  
+  <ArrowLeft size={22} />
+  
+  </button>
+  
+  </Link>
+  
+  <div className="text-center">
+  
+  <h1 className="text-2xl font-bold">
+
+C:\Users\PC\ai-tonkeeper\app\app-settings\page.tsx:357
+  <button
+  type="button"
+  onClick={() => router.back()}
+  className="w-12 h-12 rounded-2xl bg-[#101A2C] border border-slate-800 flex items-center justify-center"
+  >
+  <ArrowLeft size={22} />
+  </button>
+  
+  <h1 className="text-2xl font-bold">
+  App Settings
+  </h1>
+  
+  <div className="w-12 h-12 rounded-2xl bg-[#101A2C] border border-slate-800 flex items-center justify-center">
+  <Settings
+
+C:\Users\PC\ai-tonkeeper\app\app-settings\page.tsx:396
+  <button
+  type="button"
+  onClick={() => router.back()}
+  className="w-12 h-12 rounded-2xl bg-[#101A2C] border border-slate-800 flex items-center justify-center hover:bg-[#16233D] transition"
+  >
+  <ArrowLeft size={22} />
+  </button>
+  
+  <h1 className="text-2xl font-bold">
+  App Settings
+  </h1>
+  
+  <div className="w-12 h-12 rounded-2xl bg-[#101A2C] border border-slate-800 flex items-center justify-center">
+  <Settings
+
+C:\Users\PC\ai-tonkeeper\app\assistant\page.tsx:333
+  <Link
+  href="/dashboard"
+  aria-label="Back to dashboard"
+  className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-800 bg-[#101A2C] transition hover:border-cyan-500"
+  >
+  <ArrowLeft size={21} />
+  </Link>
+  
+  <div className="min-w-0 text-center">
+  <h1 className="truncate text-lg font-bold sm:text-xl">
+  AI Assistant
+  </h1>
+  
+  <div className="mt-1 flex items-center justify-center gap-2">
+
+C:\Users\PC\ai-tonkeeper\app\audit-security\page.tsx:28
+  
+  <Link
+  href="/admin"
+  className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-800 bg-[#101A2C]"
+  >
+  <ArrowLeft size={22} />
+  </Link>
+  
+  <div className="text-center">
+  
+  <h1 className="text-2xl font-bold">
+  Audit & Security
+  </h1>
+  
+
+C:\Users\PC\ai-tonkeeper\app\buy\page.tsx:130
+  {/* Header */}
+  
+  <div className="flex items-center justify-between mb-6">
+  
+  <button className="w-12 h-12 rounded-2xl bg-[#101A2C] border border-slate-800 flex items-center justify-center">
+  <ArrowLeft size={22} />
+  </button>
+  
+  <h1 className="text-2xl font-bold">
+  Buy Crypto
+  </h1>
+  
+  <button className="w-12 h-12 rounded-2xl bg-[#101A2C] border border-slate-800 flex items-center justify-center">
+  <CreditCard size={22} />
+
+C:\Users\PC\ai-tonkeeper\app\copy-trading\page.tsx:28
+  
+  <Link href="/dashboard">
+  
+  <button className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-800 bg-[#101A2C]">
+  
+  <ArrowLeft size={22} />
+  
+  </button>
+  
+  </Link>
+  
+  <div className="flex-1 px-3 text-center">
+  
+  <h1 className="text-2xl font-bold">
+
+C:\Users\PC\ai-tonkeeper\app\deposit\page.tsx:612
+  aria-label="Go back"
+  onClick={() =>
+  window.history.back()
+  }
+  >
+  <ArrowLeft size={20} />
+  </button>
+  
+  <h1 className="text-2xl font-bold">
+  Deposit
+  </h1>
+  
+  <div className="flex gap-2">
+  <button
+
+C:\Users\PC\ai-tonkeeper\app\device-management\page.tsx:28
+  
+  <Link href="/dashboard">
+  
+  <button className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-800 bg-[#101A2C]">
+  
+  <ArrowLeft size={22} />
+  
+  </button>
+  
+  </Link>
+  
+  <div className="flex-1 px-3 text-center">
+  
+  <h1 className="text-2xl font-bold">
+
+C:\Users\PC\ai-tonkeeper\app\fiat-history\page.tsx:28
+  
+  <Link href="/dashboard">
+  
+  <button className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-800 bg-[#101A2C]">
+  
+  <ArrowLeft size={22} />
+  
+  </button>
+  
+  </Link>
+  
+  <div className="flex-1 px-3 text-center">
+  
+  <h1 className="text-2xl font-bold">
+
+C:\Users\PC\ai-tonkeeper\app\help\page.tsx:442
+  type="button"
+  onClick={() => router.push("/settings")}
+  aria-label={current.back}
+  className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-800 bg-[#101A2C] transition hover:bg-[#16233D]"
+  >
+  <ArrowLeft size={22} />
+  </button>
+  
+  <div className="text-center">
+  <h1 className="text-2xl font-bold">
+  {current.title}
+  </h1>
+  
+  <p className="mt-1 text-sm text-slate-400">
+
+C:\Users\PC\ai-tonkeeper\app\help\page.tsx:602
+  searchCategory(current.transactions)
+  }
+  className="rounded-3xl border border-slate-800 bg-[#101A2C] p-5 text-left transition hover:bg-[#16233D] active:scale-[0.98]"
+  >
+  
+  <ArrowLeftRight
+  size={28}
+  className="mb-4 text-purple-400"
+  />
+  
+  <p className="font-semibold">
+  {current.transactions}
+  </p>
+  
+
+C:\Users\PC\ai-tonkeeper\app\help\page.tsx:881
+  type="button"
+  onClick={() => router.push("/swap")}
+  className="flex flex-col items-center justify-center text-slate-500 transition hover:text-white"
+  >
+  
+  <ArrowLeftRight size={21} />
+  
+  <span className="mt-1 text-[10px]">
+  {language === "fr"
+  ? "Échanger"
+  : language === "es"
+  ? "Intercambiar"
+  : language === "de"
+  ? "Tauschen"
+
+C:\Users\PC\ai-tonkeeper\app\help-center\page.tsx:442
+  type="button"
+  onClick={() => router.push("/settings")}
+  aria-label={current.back}
+  className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-800 bg-[#101A2C] transition hover:bg-[#16233D]"
+  >
+  <ArrowLeft size={22} />
+  </button>
+  
+  <div className="text-center">
+  <h1 className="text-2xl font-bold">
+  {current.title}
+  </h1>
+  
+  <p className="mt-1 text-sm text-slate-400">
+
+C:\Users\PC\ai-tonkeeper\app\help-center\page.tsx:602
+  searchCategory(current.transactions)
+  }
+  className="rounded-3xl border border-slate-800 bg-[#101A2C] p-5 text-left transition hover:bg-[#16233D] active:scale-[0.98]"
+  >
+  
+  <ArrowLeftRight
+  size={28}
+  className="mb-4 text-purple-400"
+  />
+  
+  <p className="font-semibold">
+  {current.transactions}
+  </p>
+  
+
+C:\Users\PC\ai-tonkeeper\app\help-center\page.tsx:881
+  type="button"
+  onClick={() => router.push("/swap")}
+  className="flex flex-col items-center justify-center text-slate-500 transition hover:text-white"
+  >
+  
+  <ArrowLeftRight size={21} />
+  
+  <span className="mt-1 text-[10px]">
+  {language === "fr"
+  ? "Échanger"
+  : language === "es"
+  ? "Intercambiar"
+  : language === "de"
+  ? "Tauschen"
+
+C:\Users\PC\ai-tonkeeper\app\history\page.tsx:318
+  
+  <button
+  type="button"
+  className="w-12 h-12 rounded-2xl bg-[#101A2C] border border-slate-800 flex items-center justify-center"
+  >
+  <ArrowLeft size={22} />
+  </button>
+  
+  <div className="text-center">
+  
+  <h1 className="text-2xl font-bold">
+  Transaction History
+  </h1>
+  
+
+C:\Users\PC\ai-tonkeeper\app\kyc\page.tsx:1089
+  onClick={() =>
+  router.back()
+  }
+  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-slate-800 bg-[#101A2C] transition hover:border-cyan-500"
+  >
+  <ArrowLeft size={22} />
+  </button>
+  
+  <h1 className="text-center text-xl font-bold">
+  Identity Verification
+  </h1>
+  
+  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-cyan-500 bg-cyan-500/10">
+  <ShieldCheck
+
+C:\Users\PC\ai-tonkeeper\app\leaderboard\page.tsx:30
+  
+  <Link href="/dashboard">
+  
+  <button className="w-12 h-12 rounded-2xl border border-slate-800 bg-[#101A2C] flex items-center justify-center">
+  
+  <ArrowLeft size={22} />
+  
+  </button>
+  
+  </Link>
+  
+  <div className="text-center">
+  
+  <h1 className="text-2xl font-bold">
+
+C:\Users\PC\ai-tonkeeper\app\legal\page.tsx:27
+  
+  <Link
+  href="/admin"
+  className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-800 bg-[#101A2C]"
+  >
+  <ArrowLeft size={22} />
+  </Link>
+  
+  <div className="text-center">
+  
+  <h1 className="text-2xl font-bold">
+  Legal
+  </h1>
+  
+
+C:\Users\PC\ai-tonkeeper\app\market\page.tsx:31
+  
+  <Link href="/dashboard">
+  
+  <button className="w-12 h-12 rounded-2xl border border-slate-800 bg-[#101A2C] flex items-center justify-center">
+  
+  <ArrowLeft size={22} />
+  
+  </button>
+  
+  </Link>
+  
+  <div className="text-center">
+  
+  <h1 className="text-2xl font-bold">
+
+C:\Users\PC\ai-tonkeeper\app\news\page.tsx:30
+  
+  <Link href="/dashboard">
+  
+  <button className="w-12 h-12 rounded-2xl border border-slate-800 bg-[#101A2C] flex items-center justify-center">
+  
+  <ArrowLeft size={22} />
+  
+  </button>
+  
+  </Link>
+  
+  <div className="text-center">
+  
+  <h1 className="text-2xl font-bold">
+
+C:\Users\PC\ai-tonkeeper\app\notifications\page.tsx:340
+  <button
+  type="button"
+  className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-800 bg-[#101A2C]"
+  aria-label="Go back"
+  >
+  <ArrowLeft size={22} />
+  </button>
+  </Link>
+  <div className="text-center">
+  <h1 className="text-2xl font-bold">Notifications</h1>
+  <p className="mt-1 text-sm text-slate-400">
+  Stay updated with your account
+  </p>
+  </div>
+
+C:\Users\PC\ai-tonkeeper\app\portfolio\page.tsx:32
+  
+  <Link
+  href="/dashboard"
+  className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-800 bg-[#101A2C]"
+  >
+  <ArrowLeft size={22} />
+  </Link>
+  
+  <div className="text-center">
+  
+  <h1 className="text-2xl font-bold">
+  Portfolio
+  </h1>
+  
+
+C:\Users\PC\ai-tonkeeper\app\price-alerts\page.tsx:30
+  
+  <Link href="/dashboard">
+  
+  <button className="w-12 h-12 rounded-2xl border border-slate-800 bg-[#101A2C] flex items-center justify-center">
+  
+  <ArrowLeft size={22} />
+  
+  </button>
+  
+  </Link>
+  
+  <div className="text-center">
+  
+  <h1 className="text-2xl font-bold">
+
+C:\Users\PC\ai-tonkeeper\app\privacy\page.tsx:475
+  type="button"
+  onClick={() => router.back()}
+  aria-label={current.back}
+  className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-800 bg-[#101A2C] transition hover:bg-[#16233D]"
+  >
+  <ArrowLeft size={22} />
+  </button>
+  
+  <div className="text-center">
+  <h1 className="text-2xl font-bold">
+  {current.title}
+  </h1>
+  
+  <p className="mt-1 text-sm text-slate-400">
+
+C:\Users\PC\ai-tonkeeper\app\privacy\page.tsx:610
+  <span className="font-medium">
+  {current.profile}
+  </span>
+  </div>
+  
+  <ArrowLeft
+  size={19}
+  className="rotate-180 text-slate-500"
+  />
+  </button>
+  
+  <button
+  type="button"
+  onClick={() => router.push("/settings")}
+
+C:\Users\PC\ai-tonkeeper\app\privacy\page.tsx:632
+  <span className="font-medium">
+  {current.settings}
+  </span>
+  </div>
+  
+  <ArrowLeft
+  size={19}
+  className="rotate-180 text-slate-500"
+  />
+  </button>
+  </div>
+  
+  {/* FOOTER */}
+  
+
+C:\Users\PC\ai-tonkeeper\app\privacy\page.tsx:673
+  <button
+  type="button"
+  onClick={() => router.push("/swap")}
+  className="flex flex-col items-center justify-center text-slate-500 transition hover:text-white"
+  >
+  <ArrowLeftRight size={21} />
+  
+  <span className="mt-1 text-[10px]">
+  {current.swap}
+  </span>
+  </button>
+  
+  <button
+  type="button"
+
+C:\Users\PC\ai-tonkeeper\app\profile\page.tsx:229
+  
+  <Link
+  href="/dashboard"
+  className="w-12 h-12 rounded-2xl bg-[#101A2C] border border-slate-800 flex items-center justify-center"
+  >
+  <ArrowLeft size={22} />
+  </Link>
+  
+  <h1 className="text-2xl font-bold">
+  Profile
+  </h1>
+  
+  <button
+  type="button"
+
+C:\Users\PC\ai-tonkeeper\app\recovery-phrase\page.tsx:28
+  
+  <Link href="/dashboard">
+  
+  <button className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-800 bg-[#101A2C]">
+  
+  <ArrowLeft size={22} />
+  
+  </button>
+  
+  </Link>
+  
+  <div className="flex-1 px-3 text-center">
+  
+  <h1 className="text-2xl font-bold">
+
+C:\Users\PC\ai-tonkeeper\app\referral\page.tsx:31
+  
+  <Link href="/dashboard">
+  
+  <button className="w-12 h-12 rounded-2xl bg-[#101A2C] border border-slate-800 flex items-center justify-center">
+  
+  <ArrowLeft size={22} />
+  
+  </button>
+  
+  </Link>
+  
+  <div className="text-center">
+  
+  <h1 className="text-2xl font-bold">
+
+C:\Users\PC\ai-tonkeeper\app\rewards\page.tsx:32
+  
+  <Link href="/dashboard">
+  
+  <button className="w-12 h-12 rounded-2xl border border-slate-800 bg-[#101A2C] flex items-center justify-center">
+  
+  <ArrowLeft size={22} />
+  
+  </button>
+  
+  </Link>
+  
+  <div className="text-center">
+  
+  <h1 className="text-2xl font-bold">
+
+C:\Users\PC\ai-tonkeeper\app\security\page.tsx:1003
+  <Link href="/settings">
+  <button
+  type="button"
+  className="w-12 h-12 rounded-2xl border border-slate-800 bg-[#101A2C] flex items-center justify-center"
+  >
+  <ArrowLeft size={22} />
+  </button>
+  </Link>
+  
+  <div className="text-center">
+  <h1 className="text-2xl font-bold">
+  Security Center
+  </h1>
+  
+
+C:\Users\PC\ai-tonkeeper\app\send\page.tsx:604
+  
+  <button
+  type="button"
+  className="w-12 h-12 rounded-2xl bg-[#101A2C] border border-slate-800 flex items-center justify-center"
+  >
+  <ArrowLeft size={24} />
+  </button>
+  
+  <h1 className="text-3xl font-bold">
+  Send
+  </h1>
+  
+  <button
+  type="button"
+
+C:\Users\PC\ai-tonkeeper\app\settings\page.tsx:460
+  type="button"
+  onClick={() => router.back()}
+  className="w-12 h-12 rounded-2xl bg-[#101A2C] border border-slate-800 flex items-center justify-center hover:bg-[#16233D] transition"
+  aria-label={t.settings}
+  >
+  <ArrowLeft size={22} />
+  </button>
+  
+  <h1 className="text-2xl font-bold">
+  {t.settings}
+  </h1>
+  
+  <button
+  type="button"
+
+C:\Users\PC\ai-tonkeeper\app\staking\page.tsx:31
+  
+  <Link href="/dashboard">
+  
+  <button className="w-12 h-12 rounded-2xl border border-slate-800 bg-[#101A2C] flex items-center justify-center">
+  
+  <ArrowLeft size={22} />
+  
+  </button>
+  
+  </Link>
+  
+  <div className="text-center">
+  
+  <h1 className="text-2xl font-bold">
+
+C:\Users\PC\ai-tonkeeper\app\subscription\page.tsx:27
+  
+  <Link
+  href="/admin"
+  className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-800 bg-[#101A2C]"
+  >
+  <ArrowLeft size={22} />
+  </Link>
+  
+  <div className="text-center">
+  
+  <h1 className="text-2xl font-bold">
+  Subscription
+  </h1>
+  
+
+C:\Users\PC\ai-tonkeeper\app\support\page.tsx:32
+  
+  <Link href="/dashboard">
+  
+  <button className="w-12 h-12 rounded-2xl bg-[#101A2C] border border-slate-800 flex items-center justify-center">
+  
+  <ArrowLeft size={22} />
+  
+  </button>
+  
+  </Link>
+  
+  <div className="text-center">
+  
+  <h1 className="text-2xl font-bold">
+
+C:\Users\PC\ai-tonkeeper\app\swap\page.tsx:266
+  <div className="flex items-center justify-between mb-6">
+  <button
+  type="button"
+  className="w-12 h-12 rounded-2xl bg-[#101A2C] border border-slate-800 flex items-center justify-center"
+  >
+  <ArrowLeft size={22} />
+  </button>
+  
+  <h1 className="text-2xl font-bold">Swap Crypto</h1>
+  
+  <button
+  type="button"
+  onClick={loadRate}
+  disabled={loadingRate}
+
+C:\Users\PC\ai-tonkeeper\app\system-status\page.tsx:28
+  
+  <Link
+  href="/admin"
+  className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-800 bg-[#101A2C]"
+  >
+  <ArrowLeft size={22} />
+  </Link>
+  
+  <div className="text-center">
+  
+  <h1 className="text-2xl font-bold">
+  System Status
+  </h1>
+  
+
+C:\Users\PC\ai-tonkeeper\app\tax-reports\page.tsx:28
+  
+  <Link
+  href="/admin"
+  className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-800 bg-[#101A2C]"
+  >
+  <ArrowLeft size={22} />
+  </Link>
+  
+  <div className="text-center">
+  
+  <h1 className="text-2xl font-bold">
+  Tax Reports
+  </h1>
+  
+
+C:\Users\PC\ai-tonkeeper\app\terms\page.tsx:409
+  type="button"
+  onClick={() => router.back()}
+  aria-label={current.back}
+  className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-800 bg-[#101A2C] transition hover:bg-[#16233D]"
+  >
+  <ArrowLeft size={22} />
+  </button>
+  
+  <div className="text-center">
+  <h1 className="text-2xl font-bold">
+  {current.title}
+  </h1>
+  
+  <p className="mt-1 text-sm text-slate-400">
+
+C:\Users\PC\ai-tonkeeper\app\terms\page.tsx:544
+  <span className="font-medium">
+  {current.profile}
+  </span>
+  </div>
+  
+  <ArrowLeft
+  size={19}
+  className="rotate-180 text-slate-500"
+  />
+  </button>
+  
+  <button
+  type="button"
+  onClick={() => router.push("/settings")}
+
+C:\Users\PC\ai-tonkeeper\app\terms\page.tsx:566
+  <span className="font-medium">
+  {current.settings}
+  </span>
+  </div>
+  
+  <ArrowLeft
+  size={19}
+  className="rotate-180 text-slate-500"
+  />
+  </button>
+  </div>
+  
+  {/* FOOTER */}
+  
+
+C:\Users\PC\ai-tonkeeper\app\terms\page.tsx:607
+  <button
+  type="button"
+  onClick={() => router.push("/swap")}
+  className="flex flex-col items-center justify-center text-slate-500 transition hover:text-white"
+  >
+  <ArrowLeftRight size={21} />
+  
+  <span className="mt-1 text-[10px]">
+  {current.swap}
+  </span>
+  </button>
+  
+  <button
+  type="button"
+
+C:\Users\PC\ai-tonkeeper\app\trading-competitions\page.tsx:28
+  
+  <Link href="/dashboard">
+  
+  <button className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-800 bg-[#101A2C]">
+  
+  <ArrowLeft size={22} />
+  
+  </button>
+  
+  </Link>
+  
+  <div className="flex-1 px-3 text-center">
+  
+  <h1 className="text-2xl font-bold">
+
+C:\Users\PC\ai-tonkeeper\app\transactions\page.tsx:30
+  
+  <Link href="/dashboard">
+  
+  <button className="w-12 h-12 rounded-2xl border border-slate-800 bg-[#101A2C] flex items-center justify-center">
+  
+  <ArrowLeft size={22} />
+  
+  </button>
+  
+  </Link>
+  
+  <div className="text-center">
+  
+  <h1 className="text-2xl font-bold">
+
+C:\Users\PC\ai-tonkeeper\app\user-management\page.tsx:29
+  
+  <Link
+  href="/admin"
+  className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-800 bg-[#101A2C]"
+  >
+  <ArrowLeft size={22} />
+  </Link>
+  
+  <div className="text-center">
+  
+  <h1 className="text-2xl font-bold">
+  User Management
+  </h1>
+  
+
+C:\Users\PC\ai-tonkeeper\app\wallet-backup\page.tsx:28
+  
+  <Link href="/dashboard">
+  
+  <button className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-800 bg-[#101A2C]">
+  
+  <ArrowLeft size={22} />
+  
+  </button>
+  
+  </Link>
+  
+  <div className="flex-1 px-3 text-center">
+  
+  <h1 className="text-2xl font-bold">
+
+C:\Users\PC\ai-tonkeeper\app\watchlist\page.tsx:32
+  
+  <Link href="/dashboard">
+  
+  <button className="w-12 h-12 rounded-2xl border border-slate-800 bg-[#101A2C] flex items-center justify-center">
+  
+  <ArrowLeft size={22} />
+  
+  </button>
+  
+  </Link>
+  
+  <div className="text-center">
+  
+  <h1 className="text-2xl font-bold">
+
+========== 3. router.back() ==========
+C:\Users\PC\ai-tonkeeper\app\about\page.tsx:258 onClick={() => router.back()}
+C:\Users\PC\ai-tonkeeper\app\ai-trade\settings\page.tsx:158 onClick={() => router.back()}
+C:\Users\PC\ai-tonkeeper\app\app-settings\page.tsx:354 onClick={() => router.back()}
+C:\Users\PC\ai-tonkeeper\app\app-settings\page.tsx:393 onClick={() => router.back()}
+C:\Users\PC\ai-tonkeeper\app\kyc\page.tsx:1085 router.back()
+C:\Users\PC\ai-tonkeeper\app\privacy\page.tsx:471 onClick={() => router.back()}
+C:\Users\PC\ai-tonkeeper\app\settings\page.tsx:456 onClick={() => router.back()}
+C:\Users\PC\ai-tonkeeper\app\terms\page.tsx:405 onClick={() => router.back()}
+
+========== 4. window.history.back() ==========
+C:\Users\PC\ai-tonkeeper\app\ai-trade\page.tsx:741 window.history.back()
+C:\Users\PC\ai-tonkeeper\app\deposit\page.tsx:609 window.history.back()
+
+========== 5. LINKS / NAVIGATION ==========
+C:\Users\PC\ai-tonkeeper\app\page.tsx:329 <Link href="/register">
+C:\Users\PC\ai-tonkeeper\app\page.tsx:341 <Link href="/login">
+C:\Users\PC\ai-tonkeeper\app\achievements\page.tsx:26 <Link href="/dashboard">
+C:\Users\PC\ai-tonkeeper\app\activity-log\page.tsx:22 href="/admin"
+C:\Users\PC\ai-tonkeeper\app\admin\page.tsx:27 href="/dashboard"
+C:\Users\PC\ai-tonkeeper\app\admin\page.tsx:164 href="/admin/kyc"
+C:\Users\PC\ai-tonkeeper\app\admin\page.tsx:271 href="/admin/users"
+C:\Users\PC\ai-tonkeeper\app\admin\page.tsx:278 href="/admin/ai-trading"
+C:\Users\PC\ai-tonkeeper\app\admin\page.tsx:285 href="/admin/logs"
+C:\Users\PC\ai-tonkeeper\app\admin\page.tsx:292 href="/admin/settings"
+C:\Users\PC\ai-tonkeeper\app\ai-bots\page.tsx:26 <Link href="/dashboard">
+C:\Users\PC\ai-tonkeeper\app\ai-insights\page.tsx:24 <Link href="/dashboard">
+C:\Users\PC\ai-tonkeeper\app\ai-portfolio-manager\page.tsx:24 <Link href="/dashboard">
+C:\Users\PC\ai-tonkeeper\app\ai-signals\page.tsx:24 <Link href="/dashboard">
+C:\Users\PC\ai-tonkeeper\app\ai-trading-journal\page.tsx:24 <Link href="/dashboard">
+C:\Users\PC\ai-tonkeeper\app\analytics\page.tsx:26 <Link href="/dashboard">
+C:\Users\PC\ai-tonkeeper\app\assistant\page.tsx:329 href="/dashboard"
+C:\Users\PC\ai-tonkeeper\app\audit-security\page.tsx:25 href="/admin"
+C:\Users\PC\ai-tonkeeper\app\copy-trading\page.tsx:24 <Link href="/dashboard">
+C:\Users\PC\ai-tonkeeper\app\device-management\page.tsx:24 <Link href="/dashboard">
+C:\Users\PC\ai-tonkeeper\app\fiat-history\page.tsx:24 <Link href="/dashboard">
+C:\Users\PC\ai-tonkeeper\app\leaderboard\page.tsx:26 <Link href="/dashboard">
+C:\Users\PC\ai-tonkeeper\app\legal\page.tsx:24 href="/admin"
+C:\Users\PC\ai-tonkeeper\app\market\page.tsx:27 <Link href="/dashboard">
+C:\Users\PC\ai-tonkeeper\app\news\page.tsx:26 <Link href="/dashboard">
+C:\Users\PC\ai-tonkeeper\app\notifications\page.tsx:334 <Link href="/dashboard">
+C:\Users\PC\ai-tonkeeper\app\portfolio\page.tsx:29 href="/dashboard"
+C:\Users\PC\ai-tonkeeper\app\price-alerts\page.tsx:26 <Link href="/dashboard">
+C:\Users\PC\ai-tonkeeper\app\profile\page.tsx:226 href="/dashboard"
+C:\Users\PC\ai-tonkeeper\app\profile\page.tsx:664 href="/settings"
+C:\Users\PC\ai-tonkeeper\app\profile\page.tsx:704 href="/security"
+C:\Users\PC\ai-tonkeeper\app\profile\page.tsx:744 href="/dashboard"
+C:\Users\PC\ai-tonkeeper\app\profile\page.tsx:784 href="/settings"
+C:\Users\PC\ai-tonkeeper\app\profile\page.tsx:824 href="/dashboard"
+C:\Users\PC\ai-tonkeeper\app\profile\page.tsx:896 href="/dashboard"
+C:\Users\PC\ai-tonkeeper\app\profile\page.tsx:976 href="/profile"
+C:\Users\PC\ai-tonkeeper\app\profile\page.tsx:992 href="/dashboard"
+C:\Users\PC\ai-tonkeeper\app\profile\page.tsx:1008 href="/dashboard"
+C:\Users\PC\ai-tonkeeper\app\profile\page.tsx:1024 href="/dashboard"
+C:\Users\PC\ai-tonkeeper\app\profile\page.tsx:1040 href="/settings"
+C:\Users\PC\ai-tonkeeper\app\recovery-phrase\page.tsx:24 <Link href="/dashboard">
+C:\Users\PC\ai-tonkeeper\app\referral\page.tsx:27 <Link href="/dashboard">
+C:\Users\PC\ai-tonkeeper\app\rewards\page.tsx:28 <Link href="/dashboard">
+C:\Users\PC\ai-tonkeeper\app\security\page.tsx:998 <Link href="/settings">
+C:\Users\PC\ai-tonkeeper\app\staking\page.tsx:27 <Link href="/dashboard">
+C:\Users\PC\ai-tonkeeper\app\subscription\page.tsx:24 href="/admin"
+C:\Users\PC\ai-tonkeeper\app\support\page.tsx:28 <Link href="/dashboard">
+C:\Users\PC\ai-tonkeeper\app\system-status\page.tsx:25 href="/admin"
+C:\Users\PC\ai-tonkeeper\app\tax-reports\page.tsx:25 href="/admin"
+C:\Users\PC\ai-tonkeeper\app\trading-competitions\page.tsx:24 <Link href="/dashboard">
+C:\Users\PC\ai-tonkeeper\app\transactions\page.tsx:26 <Link href="/dashboard">
+C:\Users\PC\ai-tonkeeper\app\user-management\page.tsx:26 href="/admin"
+C:\Users\PC\ai-tonkeeper\app\wallet-backup\page.tsx:24 <Link href="/dashboard">
+C:\Users\PC\ai-tonkeeper\app\watchlist\page.tsx:28 <Link href="/dashboard">
+
+========== 6. DESTINATIONS MANQUANTES ==========
+/admin/ai-trading | depuis C:\Users\PC\ai-tonkeeper\app\admin\page.tsx:278
+/admin/logs | depuis C:\Users\PC\ai-tonkeeper\app\admin\page.tsx:285
+/admin/settings | depuis C:\Users\PC\ai-tonkeeper\app\admin\page.tsx:292
+/admin/users | depuis C:\Users\PC\ai-tonkeeper\app\admin\page.tsx:271
+/wallets | depuis C:\Users\PC\ai-tonkeeper\app\settings\page.tsx:681
+
+========== 7. DOSSIERS WALLET ==========
+C:\Users\PC\ai-tonkeeper\app\wallet-backup
+
+========== FIN DU RAPPORT ==========
