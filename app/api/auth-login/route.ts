@@ -3,9 +3,7 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 
 import { prisma } from "@/lib/prisma";
-import { resend } from "@/lib/resend";
-
-const CODE_EXPIRATION_MS = 10 * 60 * 1000;
+import { getResend } from "@/lib/resend";
 
 function generateLoginCode(): string {
   return crypto.randomInt(100000, 1000000).toString();
@@ -36,7 +34,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ============================================================
-    // 1. Rechercher l'utilisateur
+    // 1. RECHERCHER L'UTILISATEUR
     // ============================================================
 
     const user = await prisma.user.findUnique({
@@ -64,7 +62,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ============================================================
-    // 2. Vérifier si le compte est verrouillé
+    // 2. VÉRIFIER SI LE COMPTE EST VERROUILLÉ
     // ============================================================
 
     if (user.accountLocked) {
@@ -79,7 +77,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ============================================================
-    // 3. Vérifier le mot de passe
+    // 3. VÉRIFIER LE MOT DE PASSE
     // ============================================================
 
     const validPassword = await bcrypt.compare(
@@ -98,11 +96,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ============================================================
-    // 4. Vérifier l'adresse e-mail
-    //
-    // IMPORTANT :
-    // Le code de connexion n'est envoyé QUE si l'adresse
-    // e-mail du compte est déjà vérifiée.
+    // 4. VÉRIFIER L'ADRESSE E-MAIL
     // ============================================================
 
     if (!user.emailVerified) {
@@ -118,17 +112,14 @@ export async function POST(request: NextRequest) {
     }
 
     // ============================================================
-    // 5. Générer un NOUVEAU code de connexion
-    //
-    // Ce code est indépendant de la vérification initiale
-    // de l'adresse e-mail.
+    // 5. GÉNÉRER UN NOUVEAU CODE DE CONNEXION
     // ============================================================
 
     const loginCode = generateLoginCode();
     const verificationSent = new Date();
 
     // ============================================================
-    // 6. Stocker le code
+    // 6. STOCKER LE CODE
     // ============================================================
 
     await prisma.user.update({
@@ -142,7 +133,13 @@ export async function POST(request: NextRequest) {
     });
 
     // ============================================================
-    // 7. Envoyer le code par Resend
+    // 7. INITIALISER RESEND UNIQUEMENT ICI
+    // ============================================================
+
+    const resend = getResend();
+
+    // ============================================================
+    // 8. ENVOYER LE CODE PAR E-MAIL
     // ============================================================
 
     const emailResult = await resend.emails.send({
@@ -270,7 +267,7 @@ export async function POST(request: NextRequest) {
     });
 
     // ============================================================
-    // 8. Vérifier l'envoi
+    // 9. VÉRIFIER L'ENVOI
     // ============================================================
 
     if (emailResult.error) {
@@ -279,8 +276,7 @@ export async function POST(request: NextRequest) {
         emailResult.error
       );
 
-      // Ne pas laisser un code actif si l'e-mail
-      // n'a pas pu être envoyé.
+      // Supprimer le code si l'e-mail n'a pas été envoyé.
 
       await prisma.user.update({
         where: {
@@ -303,7 +299,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ============================================================
-    // 9. Succès
+    // 10. SUCCÈS
     // ============================================================
 
     return NextResponse.json(
