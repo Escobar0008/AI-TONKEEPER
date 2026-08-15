@@ -1,7 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
+
 import Image from "next/image";
+
 import {
   ArrowLeft,
   Bot,
@@ -15,26 +21,38 @@ import {
   RefreshCw,
   Brain,
 } from "lucide-react";
+
 import TradingChart from "@/components/trading/TradingChart";
 
-/*
-|--------------------------------------------------------------------------
-| TYPES
-|--------------------------------------------------------------------------
-*/
+type TradingStatus =
+  | "ACTIVE"
+  | "PAUSED"
+  | "STOPPED";
 
-type TradingStatus = "ACTIVE" | "PAUSED" | "STOPPED";
+type TradeStatus =
+  | "OPEN"
+  | "CLOSED"
+  | "PENDING";
+
+type TradeSide =
+  | "BUY"
+  | "SELL";
 
 type Trade = {
   id: string;
   coin: string;
   pair: string;
-  side: "BUY" | "SELL";
+  side: TradeSide;
   amount: number;
   entryPrice: number;
   currentPrice: number;
+  exitPrice: number | null;
   profit: number;
-  status: "OPEN" | "CLOSED" | "PENDING";
+  fee: number;
+  confidence: number;
+  status: TradeStatus;
+  openedAt: string | null;
+  closedAt: string | null;
   createdAt: string;
 };
 
@@ -45,6 +63,7 @@ type AITrading = {
   todayProfit: number;
   winRate: number;
   openTrades: number;
+  orderCount: number;
   trades: Trade[];
   lastAnalysis: string | null;
   updatedAt: string;
@@ -59,7 +78,7 @@ type MarketPrice = {
   high24h?: number;
   low24h?: number;
   volume24h?: number;
-  turnover24h?: number;
+  marketCap?: number;
 };
 
 type AIAnalysis = {
@@ -77,13 +96,18 @@ type AITradingResponse = {
   aiTrading?: Partial<AITrading> | null;
   analysis?: AIAnalysis;
   prices?: MarketPrice[];
+  order?: {
+    id: string;
+    action: string;
+    coin: string;
+    pair: string;
+    side: string;
+    amount: number;
+    price: number;
+    status: string;
+    createdAt: string;
+  } | null;
 };
-
-/*
-|--------------------------------------------------------------------------
-| DEFAULT STATE
-|--------------------------------------------------------------------------
-*/
 
 const DEFAULT_AI_TRADING: AITrading = {
   status: "STOPPED",
@@ -92,37 +116,16 @@ const DEFAULT_AI_TRADING: AITrading = {
   todayProfit: 0,
   winRate: 0,
   openTrades: 0,
+  orderCount: 0,
   trades: [],
   lastAnalysis: null,
   updatedAt: "",
 };
 
-/*
-|--------------------------------------------------------------------------
-| MARKET SYMBOLS
-|--------------------------------------------------------------------------
-|
-| Public market data only.
-| No private exchange credentials.
-| No real orders.
-|--------------------------------------------------------------------------
-*/
-
-const MARKET_SYMBOLS = [
-  "BTCUSDT",
-  "ETHUSDT",
-  "BNBUSDT",
-  "TONUSDT",
-  "USDTUSDT",
-];
-
-/*
-|--------------------------------------------------------------------------
-| HELPERS
-|--------------------------------------------------------------------------
-*/
-
-function toNumber(value: unknown, fallback = 0): number {
+function toNumber(
+  value: unknown,
+  fallback = 0,
+): number {
   const number = Number(value);
 
   return Number.isFinite(number)
@@ -132,7 +135,7 @@ function toNumber(value: unknown, fallback = 0): number {
 
 function normalizeTrade(
   value: unknown,
-  index: number
+  index: number,
 ): Trade {
   const raw =
     value &&
@@ -148,24 +151,26 @@ function normalizeTrade(
   const pair =
     typeof raw.pair === "string"
       ? raw.pair
-      : `${coin}USDT`;
+      : `${coin}/USDT`;
 
-  const side =
+  const side: TradeSide =
     raw.side === "SELL"
       ? "SELL"
       : "BUY";
 
-  const status =
-    raw.status === "OPEN" ||
-    raw.status === "CLOSED"
-      ? raw.status
-      : "PENDING";
+  let status: TradeStatus = "PENDING";
+
+  if (raw.status === "OPEN") {
+    status = "OPEN";
+  } else if (raw.status === "CLOSED") {
+    status = "CLOSED";
+  }
 
   return {
     id:
       typeof raw.id === "string"
         ? raw.id
-        : `simulation-${index}`,
+        : `order-${index}`,
 
     coin,
 
@@ -176,18 +181,38 @@ function normalizeTrade(
     amount: toNumber(raw.amount),
 
     entryPrice: toNumber(
-      raw.entryPrice
+      raw.entryPrice,
     ),
 
     currentPrice: toNumber(
-      raw.currentPrice
+      raw.currentPrice,
     ),
 
-    profit: toNumber(
-      raw.profit
+    exitPrice:
+      raw.exitPrice === null ||
+      raw.exitPrice === undefined
+        ? null
+        : toNumber(raw.exitPrice),
+
+    profit: toNumber(raw.profit),
+
+    fee: toNumber(raw.fee),
+
+    confidence: toNumber(
+      raw.confidence,
     ),
 
     status,
+
+    openedAt:
+      typeof raw.openedAt === "string"
+        ? raw.openedAt
+        : null,
+
+    closedAt:
+      typeof raw.closedAt === "string"
+        ? raw.closedAt
+        : null,
 
     createdAt:
       typeof raw.createdAt === "string"
@@ -197,68 +222,69 @@ function normalizeTrade(
 }
 
 function normalizeAITrading(
-  value: unknown
+  value: unknown,
 ): AITrading {
   if (
     !value ||
     typeof value !== "object"
   ) {
-    return DEFAULT_AI_TRADING;
+    return {
+      ...DEFAULT_AI_TRADING,
+    };
   }
 
   const raw =
     value as Record<string, unknown>;
 
-  const rawTrades = Array.isArray(
-    raw.trades
-  )
-    ? raw.trades
-    : [];
+  const rawTrades =
+    Array.isArray(raw.trades)
+      ? raw.trades
+      : [];
 
   const trades = rawTrades.map(
     (trade, index) =>
       normalizeTrade(
         trade,
-        index
-      )
+        index,
+      ),
   );
 
-  const status =
+  const status: TradingStatus =
     raw.status === "ACTIVE" ||
     raw.status === "PAUSED" ||
     raw.status === "STOPPED"
       ? raw.status
-      : DEFAULT_AI_TRADING.status;
+      : "STOPPED";
 
   return {
     status,
 
     confidence: toNumber(
       raw.confidence,
-      DEFAULT_AI_TRADING.confidence
     ),
 
     totalProfit: toNumber(
       raw.totalProfit,
-      DEFAULT_AI_TRADING.totalProfit
     ),
 
     todayProfit: toNumber(
       raw.todayProfit,
-      DEFAULT_AI_TRADING.todayProfit
     ),
 
     winRate: toNumber(
       raw.winRate,
-      DEFAULT_AI_TRADING.winRate
     ),
 
     openTrades: toNumber(
       raw.openTrades,
       trades.filter(
         (trade) =>
-          trade.status === "OPEN"
-      ).length
+          trade.status === "OPEN",
+      ).length,
+    ),
+
+    orderCount: toNumber(
+      raw.orderCount,
     ),
 
     trades,
@@ -275,16 +301,10 @@ function normalizeAITrading(
   };
 }
 
-/*
-|--------------------------------------------------------------------------
-| PAGE
-|--------------------------------------------------------------------------
-*/
-
 export default function AITradePage() {
   const [aiTrading, setAITrading] =
     useState<AITrading>(
-      DEFAULT_AI_TRADING
+      DEFAULT_AI_TRADING,
     );
 
   const [prices, setPrices] =
@@ -292,24 +312,28 @@ export default function AITradePage() {
 
   const [analysis, setAnalysis] =
     useState<AIAnalysis | null>(
-      null
+      null,
     );
 
   const [loading, setLoading] =
     useState(false);
 
-  const [analysisLoading, setAnalysisLoading] =
-    useState(false);
+  const [
+    analysisLoading,
+    setAnalysisLoading,
+  ] = useState(false);
 
-  const [marketLoading, setMarketLoading] =
-    useState(false);
+  const [
+    marketLoading,
+    setMarketLoading,
+  ] = useState(false);
 
   const [message, setMessage] =
     useState("");
 
   /*
   |--------------------------------------------------------------------------
-  | LOAD AI TRADING
+  | LOAD
   |--------------------------------------------------------------------------
   */
 
@@ -322,53 +346,46 @@ export default function AITradePage() {
             {
               method: "GET",
               cache: "no-store",
-            }
+            },
           );
-
-        if (!response.ok) {
-          throw new Error(
-            `AI Trading API returned ${response.status}`
-          );
-        }
 
         const data =
           (await response.json()) as AITradingResponse;
 
-        if (data.success) {
-          setAITrading(
-            normalizeAITrading(
-              data.aiTrading
-            )
+        if (
+          !response.ok ||
+          !data.success
+        ) {
+          throw new Error(
+            data.message ||
+              "Unable to load AI Trading.",
           );
+        }
 
-          if (
-            Array.isArray(
-              data.prices
-            )
-          ) {
-            setPrices(
-              data.prices
-            );
-          }
+        setAITrading(
+          normalizeAITrading(
+            data.aiTrading,
+          ),
+        );
+
+        if (
+          Array.isArray(
+            data.prices,
+          )
+        ) {
+          setPrices(data.prices);
         }
       } catch (error) {
         console.error(
           "AI TRADING LOAD ERROR:",
-          error
-        );
-
-        setAITrading(
-          (previous) =>
-            normalizeAITrading(
-              previous
-            )
+          error,
         );
       }
     }, []);
 
   /*
   |--------------------------------------------------------------------------
-  | LOAD LIVE MARKET
+  | MARKET
   |--------------------------------------------------------------------------
   */
 
@@ -383,31 +400,33 @@ export default function AITradePage() {
             {
               method: "GET",
               cache: "no-store",
-            }
+            },
           );
-
-        if (!response.ok) {
-          throw new Error(
-            `Market API returned ${response.status}`
-          );
-        }
 
         const data =
           (await response.json()) as AITradingResponse;
 
         if (
+          !response.ok ||
+          !data.success
+        ) {
+          throw new Error(
+            data.message ||
+              "Market request failed.",
+          );
+        }
+
+        if (
           Array.isArray(
-            data.prices
+            data.prices,
           )
         ) {
-          setPrices(
-            data.prices
-          );
+          setPrices(data.prices);
         }
       } catch (error) {
         console.error(
           "LIVE MARKET LOAD ERROR:",
-          error
+          error,
         );
       } finally {
         setMarketLoading(false);
@@ -416,7 +435,7 @@ export default function AITradePage() {
 
   /*
   |--------------------------------------------------------------------------
-  | AI MARKET ANALYSIS
+  | ANALYSIS
   |--------------------------------------------------------------------------
   */
 
@@ -442,7 +461,7 @@ export default function AITradePage() {
               body: JSON.stringify({
                 action: "ANALYZE",
               }),
-            }
+            },
           );
 
         const data =
@@ -454,7 +473,7 @@ export default function AITradePage() {
         ) {
           setMessage(
             data.message ||
-              "Unable to analyze the market."
+              "Unable to analyze the market.",
           );
 
           return;
@@ -462,56 +481,44 @@ export default function AITradePage() {
 
         if (data.analysis) {
           setAnalysis(
-            data.analysis
+            data.analysis,
           );
+        }
 
+        if (data.aiTrading) {
           setAITrading(
-            (previous) => ({
-              ...normalizeAITrading(
-                previous
-              ),
-
-              confidence:
-                toNumber(
-                  data.analysis
-                    ?.confidence,
-                  previous.confidence
-                ),
-
-              lastAnalysis:
-                data.analysis
-                  ?.analysis ??
-                previous.lastAnalysis,
-
-              updatedAt:
-                data.analysis
-                  ?.timestamp ??
-                previous.updatedAt,
-            })
+            normalizeAITrading(
+              data.aiTrading,
+            ),
           );
         }
 
         if (
           Array.isArray(
-            data.prices
+            data.prices,
           )
         ) {
-          setPrices(
-            data.prices
-          );
+          setPrices(data.prices);
         }
 
-        setMessage(
-          "Market analysis completed successfully. Simulation only."
-        );
+        if (data.order) {
+          setMessage(
+            `${data.order.action} order ${data.order.id} created for ${data.order.pair}.`,
+          );
+        } else {
+          setMessage(
+            data.message ||
+              "Market analysis completed.",
+          );
+        }
       } catch (error) {
         console.error(
           "AI MARKET ANALYSIS ERROR:",
-          error
+          error,
         );
 
         setMessage(
-          "Unable to connect to AI Trading analysis."
+          "Unable to connect to AI Trading.",
         );
       } finally {
         setAnalysisLoading(false);
@@ -520,11 +527,7 @@ export default function AITradePage() {
 
   /*
   |--------------------------------------------------------------------------
-  | SIMULATION ACTION
-  |--------------------------------------------------------------------------
-  |
-  | START / PAUSE / STOP only control the simulation.
-  | NO REAL ORDER IS SENT.
+  | START / PAUSE / STOP
   |--------------------------------------------------------------------------
   */
 
@@ -534,7 +537,7 @@ export default function AITradePage() {
         action:
           | "START"
           | "PAUSE"
-          | "STOP"
+          | "STOP",
       ) => {
         try {
           setLoading(true);
@@ -555,9 +558,8 @@ export default function AITradePage() {
 
                 body: JSON.stringify({
                   action,
-                  simulation: true,
                 }),
-              }
+              },
             );
 
           const data =
@@ -569,7 +571,7 @@ export default function AITradePage() {
           ) {
             setMessage(
               data.message ||
-                "Simulation action failed."
+                "Action failed.",
             );
 
             return;
@@ -578,61 +580,43 @@ export default function AITradePage() {
           if (data.aiTrading) {
             setAITrading(
               normalizeAITrading(
-                data.aiTrading
-              )
+                data.aiTrading,
+              ),
             );
-          } else {
-            await loadAITrading();
           }
 
           if (
             Array.isArray(
-              data.prices
+              data.prices,
             )
           ) {
-            setPrices(
-              data.prices
-            );
+            setPrices(data.prices);
           }
 
-          if (action === "START") {
-            setMessage(
-              "AI Simulation started. No real orders are being placed."
-            );
+          setMessage(
+            data.message ||
+              `AI Trading ${action.toLowerCase()}.`,
+          );
 
-            await runAnalysis();
-          }
-
-          if (action === "PAUSE") {
-            setMessage(
-              "AI Simulation paused. No real orders are being placed."
-            );
-          }
-
-          if (action === "STOP") {
-            setMessage(
-              "AI Simulation stopped. No real orders were placed."
-            );
-
+          if (
+            action === "STOP"
+          ) {
             setAnalysis(null);
           }
         } catch (error) {
           console.error(
-            "AI SIMULATION ACTION ERROR:",
-            error
+            "AI TRADING ACTION ERROR:",
+            error,
           );
 
           setMessage(
-            "Unable to connect to AI Trading simulation."
+            "Unable to connect to AI Trading.",
           );
         } finally {
           setLoading(false);
         }
       },
-      [
-        loadAITrading,
-        runAnalysis,
-      ]
+      [],
     );
 
   /*
@@ -651,12 +635,12 @@ export default function AITradePage() {
           void loadAITrading();
           void loadMarket();
         },
-        10000
+        10000,
       );
 
     return () => {
       window.clearInterval(
-        interval
+        interval,
       );
     };
   }, [
@@ -666,13 +650,14 @@ export default function AITradePage() {
 
   /*
   |--------------------------------------------------------------------------
-  | AUTOMATIC MARKET ANALYSIS
+  | AUTOMATIC AI ENGINE
   |--------------------------------------------------------------------------
   */
 
   useEffect(() => {
     if (
-      aiTrading.status !== "ACTIVE"
+      aiTrading.status !==
+      "ACTIVE"
     ) {
       return;
     }
@@ -682,12 +667,12 @@ export default function AITradePage() {
         () => {
           void runAnalysis();
         },
-        30000
+        30000,
       );
 
     return () => {
       window.clearInterval(
-        interval
+        interval,
       );
     };
   }, [
@@ -695,18 +680,18 @@ export default function AITradePage() {
     runAnalysis,
   ]);
 
-  /*
-  |--------------------------------------------------------------------------
-  | SAFE VALUES
-  |--------------------------------------------------------------------------
-  */
-
   const trades =
     Array.isArray(
-      aiTrading.trades
+      aiTrading.trades,
     )
       ? aiTrading.trades
       : [];
+
+  const openTrades =
+    trades.filter(
+      (trade) =>
+        trade.status === "OPEN",
+    );
 
   const statusLabel =
     aiTrading.status === "ACTIVE"
@@ -722,18 +707,16 @@ export default function AITradePage() {
       ? "text-yellow-400 bg-yellow-500/20"
       : "text-red-400 bg-red-500/20";
 
-  const confidence =
-    Math.min(
-      Math.max(
-        Number(
-          analysis?.confidence ??
-            aiTrading.confidence ??
-            0
-        ) || 0,
-        0
+  const confidence = Math.min(
+    Math.max(
+      toNumber(
+        analysis?.confidence ??
+          aiTrading.confidence,
       ),
-      100
-    );
+      0,
+    ),
+    100,
+  );
 
   const signal =
     analysis?.signal ?? "WAIT";
@@ -744,12 +727,6 @@ export default function AITradePage() {
       : signal === "SELL"
       ? "bg-red-500/20 text-red-300 border-red-500/30"
       : "bg-yellow-500/20 text-yellow-300 border-yellow-500/30";
-
-  /*
-  |--------------------------------------------------------------------------
-  | PAGE
-  |--------------------------------------------------------------------------
-  */
 
   return (
     <main className="min-h-screen bg-[#050B18] text-white">
@@ -764,7 +741,6 @@ export default function AITradePage() {
               window.history.back()
             }
             className="w-11 h-11 rounded-full bg-[#101A2C] border border-slate-800 flex items-center justify-center hover:bg-[#16233D] transition"
-            aria-label="Go back"
           >
             <ArrowLeft size={20} />
           </button>
@@ -775,20 +751,19 @@ export default function AITradePage() {
             </h1>
 
             <p className="text-sm text-cyan-400">
-              Real-Time AI Trading Simulation
+              Real-Time AI Trading
             </p>
           </div>
 
           <button
             type="button"
             className="w-11 h-11 rounded-full bg-[#101A2C] border border-slate-800 flex items-center justify-center hover:bg-[#16233D] transition"
-            aria-label="Trading settings"
           >
             <Settings size={20} />
           </button>
         </div>
 
-        {/* SIMULATION STATUS */}
+        {/* ENGINE */}
 
         <section className="mb-6 rounded-3xl bg-[#101A2C] border border-cyan-500/20 p-4">
 
@@ -809,7 +784,7 @@ export default function AITradePage() {
                 </p>
 
                 <p className="text-xs text-gray-400">
-                  Live Market • Simulation
+                  Live Market • AI Orders
                 </p>
               </div>
 
@@ -839,11 +814,11 @@ export default function AITradePage() {
 
             <div className="bg-[#0B1220] rounded-2xl p-4">
               <p className="text-xs text-gray-500">
-                Orders
+                AI Orders
               </p>
 
               <p className="text-lg font-bold mt-1 text-cyan-400">
-                NONE
+                {aiTrading.orderCount}
               </p>
             </div>
 
@@ -855,7 +830,7 @@ export default function AITradePage() {
               void loadMarket()
             }
             disabled={marketLoading}
-            className="w-full mt-3 rounded-2xl bg-[#16233D] border border-slate-700 py-3 flex items-center justify-center gap-2 disabled:opacity-50 hover:bg-[#1B2C4C] transition"
+            className="w-full mt-3 rounded-2xl bg-[#16233D] border border-slate-700 py-3 flex items-center justify-center gap-2 disabled:opacity-50"
           >
             <RefreshCw
               size={17}
@@ -893,7 +868,7 @@ export default function AITradePage() {
               </div>
 
               <p className="text-gray-400 mt-2">
-                Intelligent Trading Simulation
+                Intelligent Automated Trading
               </p>
 
             </div>
@@ -908,18 +883,16 @@ export default function AITradePage() {
 
           </div>
 
-          {/* SIMULATION NOTICE */}
+          {/* ENGINE INFO */}
 
           <div className="mt-5 rounded-2xl border border-cyan-500/20 bg-cyan-500/10 p-4">
 
             <p className="text-sm font-semibold text-cyan-300">
-              SIMULATION MODE
+              AI TRADING ENGINE
             </p>
 
-            <p className="text-xs text-gray-400 mt-1 leading-5">
-              AI analyzes real-time market prices and
-              displays simulated trades. No real orders
-              are sent to any exchange.
+            <p className="text-xs text-gray-300 mt-1 leading-5">
+              AI analyzes real-time cryptocurrency market data and manages orders according to the configured trading strategy.
             </p>
 
           </div>
@@ -929,7 +902,7 @@ export default function AITradePage() {
           <div className="mt-6">
 
             <p className="text-gray-400 text-sm">
-              Simulated Profit
+              Trading Profit
             </p>
 
             <h3
@@ -942,14 +915,14 @@ export default function AITradePage() {
               {aiTrading.totalProfit >= 0
                 ? "+"
                 : ""}
-              {Number(
-                aiTrading.totalProfit
-              ).toFixed(3)}{" "}
+              {aiTrading.totalProfit.toFixed(
+                3,
+              )}{" "}
               TON
             </h3>
 
             <p className="text-gray-500 mt-1">
-              AI simulation performance
+              AI trading performance
             </p>
 
           </div>
@@ -958,40 +931,23 @@ export default function AITradePage() {
 
           <div className="flex items-center justify-between mt-8">
 
-            <Image
-              src="/coins/ton.png"
-              alt="TON"
-              width={44}
-              height={44}
-            />
-
-            <Image
-              src="/coins/btc.png"
-              alt="BTC"
-              width={44}
-              height={44}
-            />
-
-            <Image
-              src="/coins/eth.png"
-              alt="ETH"
-              width={44}
-              height={44}
-            />
-
-            <Image
-              src="/coins/bnb.png"
-              alt="BNB"
-              width={44}
-              height={44}
-            />
-
-            <Image
-              src="/coins/usdt.png"
-              alt="USDT"
-              width={44}
-              height={44}
-            />
+            {[
+              ["/coins/ton.png", "TON"],
+              ["/coins/btc.png", "BTC"],
+              ["/coins/eth.png", "ETH"],
+              ["/coins/bnb.png", "BNB"],
+              ["/coins/usdt.png", "USDT"],
+            ].map(
+              ([src, alt]) => (
+                <Image
+                  key={alt}
+                  src={src}
+                  alt={alt}
+                  width={44}
+                  height={44}
+                />
+              ),
+            )}
 
           </div>
 
@@ -1002,10 +958,12 @@ export default function AITradePage() {
             <button
               type="button"
               onClick={() =>
-                void sendAction("START")
+                void sendAction(
+                  "START",
+                )
               }
               disabled={loading}
-              className="rounded-2xl bg-green-500 py-4 flex flex-col items-center text-white disabled:opacity-50 hover:bg-green-600 transition"
+              className="rounded-2xl bg-green-500 py-4 flex flex-col items-center text-white disabled:opacity-50"
             >
               <Play size={22} />
 
@@ -1017,10 +975,12 @@ export default function AITradePage() {
             <button
               type="button"
               onClick={() =>
-                void sendAction("PAUSE")
+                void sendAction(
+                  "PAUSE",
+                )
               }
               disabled={loading}
-              className="rounded-2xl bg-yellow-500 py-4 flex flex-col items-center text-white disabled:opacity-50 hover:bg-yellow-600 transition"
+              className="rounded-2xl bg-yellow-500 py-4 flex flex-col items-center text-white disabled:opacity-50"
             >
               <Pause size={22} />
 
@@ -1032,10 +992,12 @@ export default function AITradePage() {
             <button
               type="button"
               onClick={() =>
-                void sendAction("STOP")
+                void sendAction(
+                  "STOP",
+                )
               }
               disabled={loading}
-              className="rounded-2xl bg-red-500 py-4 flex flex-col items-center text-white disabled:opacity-50 hover:bg-red-600 transition"
+              className="rounded-2xl bg-red-500 py-4 flex flex-col items-center text-white disabled:opacity-50"
             >
               <Square size={22} />
 
@@ -1046,7 +1008,7 @@ export default function AITradePage() {
 
           </div>
 
-          {/* ANALYZE BUTTON */}
+          {/* ANALYZE */}
 
           <button
             type="button"
@@ -1054,7 +1016,7 @@ export default function AITradePage() {
               void runAnalysis()
             }
             disabled={analysisLoading}
-            className="w-full mt-3 rounded-2xl bg-cyan-500 py-4 flex items-center justify-center gap-3 text-white font-semibold disabled:opacity-50 hover:bg-cyan-600 transition"
+            className="w-full mt-3 rounded-2xl bg-cyan-500 py-4 flex items-center justify-center gap-3 text-white font-semibold disabled:opacity-50"
           >
             <Brain
               size={22}
@@ -1078,7 +1040,7 @@ export default function AITradePage() {
 
         </section>
 
-        {/* LIVE MARKET */}
+        {/* MARKET */}
 
         <section className="mt-6 bg-[#101A2C] border border-slate-800 rounded-3xl p-5">
 
@@ -1127,35 +1089,29 @@ export default function AITradePage() {
                         <>
                           <p className="font-bold">
                             $
-                            {Number(
-                              market.price
-                            ).toLocaleString(
+                            {market.price.toLocaleString(
                               "en-US",
                               {
                                 maximumFractionDigits: 8,
-                              }
+                              },
                             )}
                           </p>
 
                           <p
                             className={`text-xs mt-1 ${
-                              (
-                                market.change24h ??
-                                0
-                              ) >= 0
+                              (market.change24h ??
+                                0) >= 0
                                 ? "text-green-400"
                                 : "text-red-400"
                             }`}
                           >
+                            {(market.change24h ??
+                              0) >= 0
+                              ? "+"
+                              : ""}
                             {(
                               market.change24h ??
                               0
-                            ) >= 0
-                              ? "+"
-                              : ""}
-                            {Number(
-                              market.change24h ??
-                                0
                             ).toFixed(2)}
                             %
                           </p>
@@ -1171,7 +1127,7 @@ export default function AITradePage() {
                   </div>
 
                 </div>
-              )
+              ),
             )}
 
             {prices.length === 0 && (
@@ -1184,14 +1140,13 @@ export default function AITradePage() {
 
         </section>
 
-        {/* AI STATISTICS */}
+        {/* STATISTICS */}
 
         <section className="mt-6 grid grid-cols-2 gap-4">
 
           <div className="bg-[#101A2C] border border-slate-800 rounded-3xl p-5">
 
             <div className="flex items-center justify-between">
-
               <Activity
                 size={24}
                 className="text-cyan-400"
@@ -1200,7 +1155,6 @@ export default function AITradePage() {
               <span className="text-cyan-400 text-xs">
                 LIVE
               </span>
-
             </div>
 
             <p className="text-gray-400 text-sm mt-4">
@@ -1216,7 +1170,6 @@ export default function AITradePage() {
           <div className="bg-[#101A2C] border border-slate-800 rounded-3xl p-5">
 
             <div className="flex items-center justify-between">
-
               <TrendingUp
                 size={24}
                 className="text-green-400"
@@ -1225,11 +1178,10 @@ export default function AITradePage() {
               <span className="text-green-400 text-xs">
                 TODAY
               </span>
-
             </div>
 
             <p className="text-gray-400 text-sm mt-4">
-              Today's Simulated Profit
+              Today's Profit
             </p>
 
             <h3
@@ -1242,9 +1194,9 @@ export default function AITradePage() {
               {aiTrading.todayProfit >= 0
                 ? "+"
                 : ""}
-              {Number(
-                aiTrading.todayProfit
-              ).toFixed(3)}{" "}
+              {aiTrading.todayProfit.toFixed(
+                3,
+              )}{" "}
               TON
             </h3>
 
@@ -1259,12 +1211,10 @@ export default function AITradePage() {
             <h3 className="text-3xl font-bold mt-3">
               {Math.min(
                 Math.max(
-                  Number(
-                    aiTrading.winRate
-                  ) || 0,
-                  0
+                  aiTrading.winRate,
+                  0,
                 ),
-                100
+                100,
               ).toFixed(0)}
               %
             </h3>
@@ -1276,12 +1226,10 @@ export default function AITradePage() {
                 style={{
                   width: `${Math.min(
                     Math.max(
-                      Number(
-                        aiTrading.winRate
-                      ) || 0,
-                      0
+                      aiTrading.winRate,
+                      0,
                     ),
-                    100
+                    100,
                   )}%`,
                 }}
               />
@@ -1293,26 +1241,24 @@ export default function AITradePage() {
           <div className="bg-[#101A2C] border border-slate-800 rounded-3xl p-5">
 
             <p className="text-gray-400 text-sm">
-              Open Simulations
+              Open Orders
             </p>
 
             <h3 className="text-3xl font-bold mt-3">
-              {Number(
-                aiTrading.openTrades
-              ) || 0}
+              {aiTrading.openTrades}
             </h3>
 
             <p className="text-xs text-gray-500 mt-4">
               {aiTrading.openTrades > 0
-                ? "Active simulated positions"
-                : "No active simulations"}
+                ? "Active AI positions"
+                : "No active orders"}
             </p>
 
           </div>
 
         </section>
 
-        {/* AI MARKET ANALYSIS */}
+        {/* ANALYSIS */}
 
         <section className="mt-6 rounded-3xl bg-gradient-to-br from-cyan-600 to-blue-700 p-6">
 
@@ -1323,7 +1269,6 @@ export default function AITradePage() {
               <Bot size={30} />
 
               <div>
-
                 <h2 className="text-xl font-bold">
                   AI Market Analysis
                 </h2>
@@ -1331,7 +1276,6 @@ export default function AITradePage() {
                 <p className="text-xs text-blue-100 mt-1">
                   Real-time market intelligence
                 </p>
-
               </div>
 
             </div>
@@ -1399,7 +1343,7 @@ export default function AITradePage() {
 
           {analysis?.prices &&
             Object.keys(
-              analysis.prices
+              analysis.prices,
             ).length > 0 && (
               <div className="mt-4">
 
@@ -1410,14 +1354,13 @@ export default function AITradePage() {
                 <div className="grid grid-cols-2 gap-2">
 
                   {Object.entries(
-                    analysis.prices
+                    analysis.prices,
                   ).map(
                     ([coin, price]) => (
                       <div
                         key={coin}
                         className="bg-black/20 rounded-xl p-3"
                       >
-
                         <div className="flex items-center justify-between gap-2">
 
                           <span className="text-xs font-semibold">
@@ -1427,19 +1370,18 @@ export default function AITradePage() {
                           <span className="text-xs text-blue-100 text-right">
                             $
                             {Number(
-                              price
+                              price,
                             ).toLocaleString(
                               "en-US",
                               {
                                 maximumFractionDigits: 8,
-                              }
+                              },
                             )}
                           </span>
 
                         </div>
-
                       </div>
-                    )
+                    ),
                   )}
 
                 </div>
@@ -1451,103 +1393,124 @@ export default function AITradePage() {
             <p className="text-[11px] text-blue-100 mt-4 text-center">
               Last analysis:{" "}
               {new Date(
-                analysis.timestamp
+                analysis.timestamp,
               ).toLocaleString()}
             </p>
           )}
 
         </section>
 
-        {/* SIMULATED POSITIONS */}
+        {/* OPEN ORDERS */}
 
         <section className="mt-6 bg-[#101A2C] border border-slate-800 rounded-3xl p-5">
 
           <div className="flex items-center justify-between">
 
             <h2 className="text-xl font-bold">
-              Simulated Positions
+              Open Orders
             </h2>
 
             <span className="text-cyan-400 text-sm">
-              {trades.filter(
-                (trade) =>
-                  trade.status === "OPEN"
-              ).length}
+              {openTrades.length}
             </span>
 
           </div>
 
           <div className="space-y-3 mt-5">
 
-            {trades
-              .filter(
-                (trade) =>
-                  trade.status === "OPEN"
-              )
+            {openTrades
               .slice(0, 10)
-              .map(
-                (
-                  trade
-                ) => (
-                  <div
-                    key={trade.id}
-                    className="bg-[#0B1220] rounded-2xl p-4"
-                  >
+              .map((trade) => (
+                <div
+                  key={trade.id}
+                  className="bg-[#0B1220] rounded-2xl p-4"
+                >
 
-                    <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between">
 
-                      <div>
+                    <div>
+                      <p className="font-semibold">
+                        {trade.pair}
+                      </p>
 
-                        <p className="font-semibold">
-                          {trade.pair}
-                        </p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        {trade.side} • AI ORDER
+                      </p>
+                    </div>
 
-                        <p className="text-xs text-gray-400 mt-1">
-                          {trade.side} • SIMULATION
-                        </p>
+                    <div className="text-right">
 
-                      </div>
+                      <p
+                        className={`font-semibold ${
+                          trade.profit >= 0
+                            ? "text-green-400"
+                            : "text-red-400"
+                        }`}
+                      >
+                        {trade.profit >= 0
+                          ? "+"
+                          : ""}
+                        {trade.profit.toFixed(
+                          4,
+                        )}
+                      </p>
 
-                      <div className="text-right">
-
-                        <p
-                          className={`font-semibold ${
-                            trade.profit >= 0
-                              ? "text-green-400"
-                              : "text-red-400"
-                          }`}
-                        >
-                          {trade.profit >= 0
-                            ? "+"
-                            : ""}
-                          {trade.profit.toFixed(4)}
-                        </p>
-
-                        <p className="text-xs text-gray-500 mt-1">
-                          Simulated PnL
-                        </p>
-
-                      </div>
+                      <p className="text-xs text-gray-500 mt-1">
+                        PnL
+                      </p>
 
                     </div>
 
                   </div>
-                )
-              )}
 
-            {trades.filter(
-              (trade) =>
-                trade.status === "OPEN"
-            ).length === 0 && (
+                  <div className="grid grid-cols-2 gap-3 mt-4">
+
+                    <div>
+                      <p className="text-[11px] text-gray-500">
+                        Entry
+                      </p>
+
+                      <p className="text-sm font-semibold">
+                        $
+                        {trade.entryPrice.toLocaleString(
+                          "en-US",
+                          {
+                            maximumFractionDigits: 8,
+                          },
+                        )}
+                      </p>
+                    </div>
+
+                    <div className="text-right">
+                      <p className="text-[11px] text-gray-500">
+                        Current
+                      </p>
+
+                      <p className="text-sm font-semibold">
+                        $
+                        {trade.currentPrice.toLocaleString(
+                          "en-US",
+                          {
+                            maximumFractionDigits: 8,
+                          },
+                        )}
+                      </p>
+                    </div>
+
+                  </div>
+
+                </div>
+              ))}
+
+            {openTrades.length === 0 && (
               <div className="bg-[#0B1220] rounded-2xl p-5 text-center">
 
                 <p className="text-gray-400">
-                  No simulated positions.
+                  No open orders.
                 </p>
 
                 <p className="text-xs text-gray-500 mt-2">
-                  Start the AI simulation to generate
-                  virtual positions.
+                  Start AI Trading to allow the engine to manage orders.
                 </p>
 
               </div>
@@ -1566,69 +1529,50 @@ export default function AITradePage() {
           </h2>
 
           <p className="text-sm text-gray-400 mt-2">
-            Assets monitored by the AI simulation
+            Assets monitored by AI Trading
           </p>
 
           <div className="flex items-center justify-between mt-6">
 
-            <Image
-              src="/coins/ton.png"
-              alt="TON"
-              width={38}
-              height={38}
-            />
-
-            <Image
-              src="/coins/btc.png"
-              alt="BTC"
-              width={38}
-              height={38}
-            />
-
-            <Image
-              src="/coins/eth.png"
-              alt="ETH"
-              width={38}
-              height={38}
-            />
-
-            <Image
-              src="/coins/bnb.png"
-              alt="BNB"
-              width={38}
-              height={38}
-            />
-
-            <Image
-              src="/coins/usdt.png"
-              alt="USDT"
-              width={38}
-              height={38}
-            />
+            {[
+              ["/coins/ton.png", "TON"],
+              ["/coins/btc.png", "BTC"],
+              ["/coins/eth.png", "ETH"],
+              ["/coins/bnb.png", "BNB"],
+              ["/coins/usdt.png", "USDT"],
+            ].map(
+              ([src, alt]) => (
+                <Image
+                  key={alt}
+                  src={src}
+                  alt={alt}
+                  width={38}
+                  height={38}
+                />
+              ),
+            )}
 
           </div>
 
         </section>
 
-        {/* REAL-TIME TRADING CHART */}
+        {/* CHART */}
 
         <section className="mt-6">
-
           <TradingChart
             symbol="BTCUSDT"
             category="spot"
           />
-
         </section>
 
-        {/* RECENT SIMULATED TRADES */}
+        {/* RECENT ORDERS */}
 
         <section className="mt-6 bg-[#101A2C] border border-slate-800 rounded-3xl p-5">
 
           <div className="flex items-center justify-between mb-5">
 
             <h2 className="text-xl font-bold">
-              Recent Simulated Trades
+              Recent AI Orders
             </h2>
 
             <span className="text-cyan-400 text-sm">
@@ -1640,91 +1584,81 @@ export default function AITradePage() {
           <div className="space-y-4">
 
             {trades.length === 0 ? (
-
               <div className="bg-[#0B1220] rounded-2xl p-5 text-center">
 
                 <p className="text-gray-400">
-                  No simulated trades yet
+                  No orders yet.
                 </p>
 
                 <p className="text-xs text-gray-500 mt-2">
-                  AI Trading will display simulated
-                  trades here.
+                  AI Trading orders will appear here.
                 </p>
 
               </div>
-
             ) : (
-
               trades
-                .slice(0, 5)
-                .map(
-                  (trade) => {
+                .slice(0, 10)
+                .map((trade) => {
+                  const coinFile =
+                    trade.coin
+                      .toLowerCase()
+                      .replace(
+                        /[^a-z0-9]/g,
+                        "",
+                      );
 
-                    const coinFile =
-                      trade.coin
-                        .toLowerCase()
-                        .replace(
-                          /[^a-z0-9]/g,
-                          ""
-                        );
+                  return (
+                    <div
+                      key={trade.id}
+                      className="flex items-center justify-between bg-[#0B1220] rounded-2xl p-4"
+                    >
 
-                    return (
-                      <div
-                        key={trade.id}
-                        className="flex items-center justify-between bg-[#0B1220] rounded-2xl p-4"
-                      >
+                      <div className="flex items-center gap-3 min-w-0">
 
-                        <div className="flex items-center gap-3 min-w-0">
+                        <Image
+                          src={`/coins/${coinFile}.png`}
+                          alt={trade.coin}
+                          width={42}
+                          height={42}
+                          onError={(
+                            event,
+                          ) => {
+                            event.currentTarget.style.display =
+                              "none";
+                          }}
+                        />
 
-                          <Image
-                            src={`/coins/${coinFile}.png`}
-                            alt={trade.coin}
-                            width={42}
-                            height={42}
-                            onError={(
-                              event
-                            ) => {
-                              (
-                                event.currentTarget as HTMLImageElement
-                              ).style.display =
-                                "none";
-                            }}
-                          />
+                        <div className="min-w-0">
 
-                          <div className="min-w-0">
+                          <p className="font-semibold truncate">
+                            {trade.pair}
+                          </p>
 
-                            <p className="font-semibold truncate">
-                              {trade.pair}
-                            </p>
-
-                            <p className="text-xs text-gray-400">
-                              {trade.side} • SIMULATION
-                            </p>
-
-                          </div>
+                          <p className="text-xs text-gray-400">
+                            {trade.side} • AI ORDER
+                          </p>
 
                         </div>
 
-                        <span
-                          className={
-                            trade.status ===
-                            "OPEN"
-                              ? "text-green-400 font-semibold"
-                              : trade.status ===
-                                "CLOSED"
-                              ? "text-gray-400 font-semibold"
-                              : "text-yellow-400 font-semibold"
-                          }
-                        >
-                          {trade.status}
-                        </span>
-
                       </div>
-                    );
-                  }
-                )
 
+                      <span
+                        className={
+                          trade.status ===
+                          "OPEN"
+                            ? "text-green-400 font-semibold"
+                            : trade.status ===
+                              "CLOSED"
+                            ? "text-gray-400 font-semibold"
+                            : "text-yellow-400 font-semibold"
+                        }
+                      >
+                        {trade.status}
+                      </span>
+
+                    </div>
+                  );
+                })
             )}
 
           </div>
@@ -1749,7 +1683,7 @@ export default function AITradePage() {
               />
 
               <p className="text-gray-300">
-                AI Trade uses public market data only.
+                AI Trading uses real-time public market data.
               </p>
 
             </div>
@@ -1762,7 +1696,7 @@ export default function AITradePage() {
               />
 
               <p className="text-gray-300">
-                No exchange order is sent by AI Trade.
+                Trading decisions are recorded in AI TONKEEPER.
               </p>
 
             </div>
@@ -1775,7 +1709,7 @@ export default function AITradePage() {
               />
 
               <p className="text-gray-300">
-                All displayed trades are simulations.
+                Orders and positions are tracked with their current market prices.
               </p>
 
             </div>
@@ -1788,7 +1722,7 @@ export default function AITradePage() {
               />
 
               <p className="text-gray-300">
-                Real-time market data is refreshed automatically.
+                Market data is refreshed automatically.
               </p>
 
             </div>
