@@ -214,21 +214,23 @@ model SecurityLog {
 }
 
 model AITradeSettings {
-  id                     String            @id @default(cuid())
-  userId                 String            @unique
-  strategy               AITradeStrategy   @default(BALANCED)
-  riskLevel              AIRiskLevel       @default(MEDIUM)
-  minimumConfidence      Float             @default(70)
-  maximumTradeAllocation Float             @default(10)
-  stopLossProtection     Boolean           @default(true)
-  dailyLossProtection    Boolean           @default(true)
-  emergencyStop          Boolean           @default(true)
-  enabled                Boolean           @default(false)
-  createdAt              DateTime          @default(now())
-  updatedAt              DateTime          @updatedAt
-  trades                 AITrade[]
-  decisions              AITradeDecision[]
-  user                   User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                     String          @id @default(cuid())
+  userId                 String          @unique
+  strategy               AITradeStrategy @default(BALANCED)
+  riskLevel              AIRiskLevel     @default(MEDIUM)
+  minimumConfidence      Float           @default(70)
+  maximumTradeAllocation Float           @default(10)
+  stopLossProtection     Boolean         @default(true)
+  dailyLossProtection    Boolean         @default(true)
+  emergencyStop          Boolean         @default(true)
+  enabled                Boolean         @default(false)
+
+  orderCount Int               @default(0)
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+  trades     AITrade[]
+  decisions  AITradeDecision[]
+  user       User              @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }

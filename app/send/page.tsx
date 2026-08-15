@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
@@ -599,10 +599,9 @@ export default function SendPage() {
 
           <button
             type="button"
-            className="w-12 h-12 rounded-2xl bg-[#101A2C] border border-slate-800 flex items-center justify-center"
-          >
-            <ArrowLeft size={24} />
-          </button>
+            className="w-12 h-12 rounded-2xl bg-[#101A2C] border border-slate-800 flex items-center justify-center" onClick={() => window.history.back()}>
+    <ArrowLeft size={24} />
+  </button>
 
           <h1 className="text-3xl font-bold">
             Send
@@ -998,23 +997,23 @@ export default function SendPage() {
           <ul className="mt-3 space-y-2 text-sm text-gray-300">
 
             <li>
-              • Double-check the recipient address before sending.
+              â€¢ Double-check the recipient address before sending.
             </li>
 
             <li>
-              • Blockchain transactions cannot be cancelled.
+              â€¢ Blockchain transactions cannot be cancelled.
             </li>
 
             <li>
-              • Network fees are automatically deducted.
+              â€¢ Network fees are automatically deducted.
             </li>
 
             <li>
-              • Your withdrawal request will be securely processed by AI TONKEEPER.
+              â€¢ Your withdrawal request will be securely processed by AI TONKEEPER.
             </li>
 
             <li>
-              • Outgoing transactions are processed from the AI TONKEEPER main wallet after validation.
+              â€¢ Outgoing transactions are processed from the AI TONKEEPER main wallet after validation.
             </li>
 
           </ul>

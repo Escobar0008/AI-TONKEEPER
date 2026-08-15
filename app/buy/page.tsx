@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useMemo, useState } from "react";
 import Image from "next/image";
@@ -126,9 +126,9 @@ return (
 
         <div className="flex items-center justify-between mb-6">
 
-          <button className="w-12 h-12 rounded-2xl bg-[#101A2C] border border-slate-800 flex items-center justify-center">
-            <ArrowLeft size={22} />
-          </button>
+          <button className="w-12 h-12 rounded-2xl bg-[#101A2C] border border-slate-800 flex items-center justify-center" onClick={() => window.history.back()}>
+    <ArrowLeft size={22} />
+  </button>
 
           <h1 className="text-2xl font-bold">
             Buy Crypto
@@ -172,7 +172,7 @@ return (
             <ShieldCheck size={18} />
 
             <span>
-              Secure purchase • Fast processing • Order ID generated
+              Secure purchase â€¢ Fast processing â€¢ Order ID generated
             </span>
 
           </div>
@@ -429,23 +429,23 @@ return (
           <ul className="mt-3 space-y-2 text-sm text-gray-300">
 
             <li>
-              • Select the cryptocurrency you want to purchase.
+              â€¢ Select the cryptocurrency you want to purchase.
             </li>
 
             <li>
-              • An Order ID will be generated before payment.
+              â€¢ An Order ID will be generated before payment.
             </li>
 
             <li>
-              • Complete payment with the selected external provider.
+              â€¢ Complete payment with the selected external provider.
             </li>
 
             <li>
-              • Return to AI TONKEEPER and verify your Order ID.
+              â€¢ Return to AI TONKEEPER and verify your Order ID.
             </li>
 
             <li>
-              • After verification, the purchase will be reviewed before the balance is credited.
+              â€¢ After verification, the purchase will be reviewed before the balance is credited.
             </li>
 
           </ul>
@@ -496,19 +496,19 @@ return (
           <ul className="mt-3 space-y-2 text-sm text-gray-300">
 
             <li>
-              • Never share your Order ID with anyone.
+              â€¢ Never share your Order ID with anyone.
             </li>
 
             <li>
-              • Purchases are credited only after successful verification.
+              â€¢ Purchases are credited only after successful verification.
             </li>
 
             <li>
-              • AI TONKEEPER does not ask users to connect a personal wallet.
+              â€¢ AI TONKEEPER does not ask users to connect a personal wallet.
             </li>
 
             <li>
-              • All purchases are processed through the AI TONKEEPER main wallet.
+              â€¢ All purchases are processed through the AI TONKEEPER main wallet.
             </li>
 
           </ul>

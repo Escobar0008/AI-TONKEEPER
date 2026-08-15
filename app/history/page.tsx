@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -313,10 +313,9 @@ export default function HistoryPage() {
 
           <button
             type="button"
-            className="w-12 h-12 rounded-2xl bg-[#101A2C] border border-slate-800 flex items-center justify-center"
-          >
-            <ArrowLeft size={22} />
-          </button>
+            className="w-12 h-12 rounded-2xl bg-[#101A2C] border border-slate-800 flex items-center justify-center" onClick={() => window.history.back()}>
+    <ArrowLeft size={22} />
+  </button>
 
           <div className="text-center">
 
