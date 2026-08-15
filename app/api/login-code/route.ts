@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { getResend } from "@/lib/resend";
@@ -49,14 +49,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          message: "Votre compte est temporairement verrouillé.",
+          message: "Votre compte est temporairement verrouillÃ©.",
         },
         { status: 403 }
       );
     }
 
     // ============================================================
-    // VÉRIFICATION DU MOT DE PASSE
+    // VÃ‰RIFICATION DU MOT DE PASSE
     // ============================================================
 
     if (!resendCode) {
@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
       }
 
       // ============================================================
-      // VÉRIFICATION EMAIL
+      // VÃ‰RIFICATION EMAIL
       // ============================================================
 
       if (!user.emailVerified) {
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
             success: false,
             requiresEmailVerification: true,
             message:
-              "Veuillez vérifier votre adresse e-mail avant de vous connecter.",
+              "Veuillez vÃ©rifier votre adresse e-mail avant de vous connecter.",
           },
           { status: 403 }
         );
@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ============================================================
-    // GÉNÉRER LE CODE
+    // GÃ‰NÃ‰RER LE CODE
     // ============================================================
 
     const loginCode = Math.floor(
@@ -136,8 +136,8 @@ export async function POST(request: NextRequest) {
     // ENVOYER L'EMAIL
     // ============================================================
 
-    const emailResult = await resend.emails.send({
-      from: "AI TONKEEPER <onboarding@resend.dev>",
+    const emailResult = await getResend().emails.send({
+      from: "AI TONKEEPER <security@ai-tonkeeper.xyz>",
       to: [email],
       subject: "Votre code de connexion AI TONKEEPER",
 
@@ -180,7 +180,7 @@ export async function POST(request: NextRequest) {
                   color:#94a3b8;
                   font-size:14px;
                 ">
-                  Secure TON Wallet • AI Powered
+                  Secure TON Wallet â€¢ AI Powered
                 </p>
 
                 <h2 style="
@@ -195,7 +195,7 @@ export async function POST(request: NextRequest) {
                   line-height:1.6;
                 ">
                   Utilisez le code ci-dessous pour confirmer
-                  votre connexion à AI TONKEEPER.
+                  votre connexion Ã  AI TONKEEPER.
                 </p>
 
                 <div style="
@@ -230,7 +230,7 @@ export async function POST(request: NextRequest) {
                   color:#64748b;
                   font-size:12px;
                 ">
-                  Si vous n'êtes pas à l'origine de cette
+                  Si vous n'Ãªtes pas Ã  l'origine de cette
                   tentative de connexion, vous pouvez ignorer
                   cet e-mail.
                 </p>
@@ -243,7 +243,7 @@ export async function POST(request: NextRequest) {
                 color:#475569;
                 font-size:12px;
               ">
-                © 2026 AI TONKEEPER
+                Â© 2026 AI TONKEEPER
               </p>
 
             </div>
@@ -255,7 +255,7 @@ export async function POST(request: NextRequest) {
     });
 
     // ============================================================
-    // VÉRIFIER L'ENVOI
+    // VÃ‰RIFIER L'ENVOI
     // ============================================================
 
     if (emailResult.error) {
@@ -264,7 +264,7 @@ export async function POST(request: NextRequest) {
         emailResult.error
       );
 
-      // Supprimer le code s'il n'a pas été envoyé.
+      // Supprimer le code s'il n'a pas Ã©tÃ© envoyÃ©.
 
       await prisma.user.update({
         where: {
@@ -287,7 +287,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ============================================================
-    // SUCCÈS
+    // SUCCÃˆS
     // ============================================================
 
     return NextResponse.json(
@@ -295,8 +295,8 @@ export async function POST(request: NextRequest) {
         success: true,
         requiresLoginVerification: true,
         message: resendCode
-          ? "Code renvoyé avec succès."
-          : "Code envoyé avec succès.",
+          ? "Code renvoyÃ© avec succÃ¨s."
+          : "Code envoyÃ© avec succÃ¨s.",
       },
       { status: 200 }
     );

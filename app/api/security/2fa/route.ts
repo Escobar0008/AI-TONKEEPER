@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { getResend } from "@/lib/resend";
@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          message: "Vous devez être connecté.",
+          message: "Vous devez Ãªtre connectÃ©.",
         },
         { status: 401 }
       );
@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
           success: true,
           enabled: true,
-          message: "La 2FA est déjà activée.",
+          message: "La 2FA est dÃ©jÃ  activÃ©e.",
         });
       }
 
@@ -69,8 +69,8 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      const emailResult = await resend.emails.send({
-        from: "AI TONKEEPER <onboarding@resend.dev>",
+      const emailResult = await getResend().emails.send({
+        from: "AI TONKEEPER <security@ai-tonkeeper.xyz>",
         to: [user.email],
         subject: "Activation de la 2FA - AI TONKEEPER",
         html: `
@@ -127,7 +127,7 @@ export async function POST(request: NextRequest) {
                       font-size:14px;
                     "
                   >
-                    Secure TON Wallet • AI Powered
+                    Secure TON Wallet â€¢ AI Powered
                   </p>
 
                   <h2
@@ -146,8 +146,8 @@ export async function POST(request: NextRequest) {
                       line-height:1.6;
                     "
                   >
-                    Vous avez demandé l'activation de
-                    l'authentification à deux facteurs.
+                    Vous avez demandÃ© l'activation de
+                    l'authentification Ã  deux facteurs.
                   </p>
 
                   <p
@@ -197,7 +197,7 @@ export async function POST(request: NextRequest) {
                       font-size:12px;
                     "
                   >
-                    Si vous n'avez pas demandé cette activation,
+                    Si vous n'avez pas demandÃ© cette activation,
                     ignorez cet e-mail.
                   </p>
                 </div>
@@ -210,7 +210,7 @@ export async function POST(request: NextRequest) {
                     font-size:12px;
                   "
                 >
-                  © 2026 AI TONKEEPER
+                  Â© 2026 AI TONKEEPER
                 </p>
               </div>
             </body>
@@ -249,7 +249,7 @@ export async function POST(request: NextRequest) {
           userId,
           action: "2FA_ENABLE_CODE_SENT",
           description:
-            "Code envoyé pour confirmer l'activation de la 2FA.",
+            "Code envoyÃ© pour confirmer l'activation de la 2FA.",
         },
       });
 
@@ -257,14 +257,14 @@ export async function POST(request: NextRequest) {
         success: true,
         requiresVerification: true,
         message:
-          "Un code de confirmation a été envoyé à votre adresse e-mail.",
+          "Un code de confirmation a Ã©tÃ© envoyÃ© Ã  votre adresse e-mail.",
       });
     }
 
     /*
      * ============================================================
      * VERIFY ENABLE
-     * Vérifie le code puis active réellement la 2FA.
+     * VÃ©rifie le code puis active rÃ©ellement la 2FA.
      * ============================================================
      */
 
@@ -273,7 +273,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           {
             success: false,
-            message: "Code de vérification requis.",
+            message: "Code de vÃ©rification requis.",
           },
           { status: 400 }
         );
@@ -283,7 +283,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           {
             success: false,
-            message: "Aucun code de vérification actif.",
+            message: "Aucun code de vÃ©rification actif.",
           },
           { status: 400 }
         );
@@ -299,7 +299,7 @@ export async function POST(request: NextRequest) {
             {
               success: false,
               message:
-                "Le code a expiré. Demandez un nouveau code.",
+                "Le code a expirÃ©. Demandez un nouveau code.",
             },
             { status: 400 }
           );
@@ -310,7 +310,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           {
             success: false,
-            message: "Code de vérification incorrect.",
+            message: "Code de vÃ©rification incorrect.",
           },
           { status: 400 }
         );
@@ -332,7 +332,7 @@ export async function POST(request: NextRequest) {
           userId,
           action: "2FA_ENABLED",
           description:
-            "L'authentification à deux facteurs a été activée.",
+            "L'authentification Ã  deux facteurs a Ã©tÃ© activÃ©e.",
         },
       });
 
@@ -340,14 +340,14 @@ export async function POST(request: NextRequest) {
         success: true,
         enabled: true,
         message:
-          "Authentification à deux facteurs activée avec succès.",
+          "Authentification Ã  deux facteurs activÃ©e avec succÃ¨s.",
       });
     }
 
     /*
      * ============================================================
      * DISABLE
-     * Demande un code avant de désactiver la 2FA.
+     * Demande un code avant de dÃ©sactiver la 2FA.
      * ============================================================
      */
 
@@ -356,7 +356,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
           success: true,
           enabled: false,
-          message: "La 2FA est déjà désactivée.",
+          message: "La 2FA est dÃ©jÃ  dÃ©sactivÃ©e.",
         });
       }
 
@@ -374,10 +374,10 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      const emailResult = await resend.emails.send({
-        from: "AI TONKEEPER <onboarding@resend.dev>",
+      const emailResult = await getResend().emails.send({
+        from: "AI TONKEEPER <security@ai-tonkeeper.xyz>",
         to: [user.email],
-        subject: "Désactivation de la 2FA - AI TONKEEPER",
+        subject: "DÃ©sactivation de la 2FA - AI TONKEEPER",
         html: `
           <!DOCTYPE html>
           <html lang="fr">
@@ -387,7 +387,7 @@ export async function POST(request: NextRequest) {
                 name="viewport"
                 content="width=device-width, initial-scale=1.0"
               />
-              <title>Désactivation 2FA</title>
+              <title>DÃ©sactivation 2FA</title>
             </head>
 
             <body
@@ -432,7 +432,7 @@ export async function POST(request: NextRequest) {
                       font-size:14px;
                     "
                   >
-                    Secure TON Wallet • AI Powered
+                    Secure TON Wallet â€¢ AI Powered
                   </p>
 
                   <h2
@@ -441,7 +441,7 @@ export async function POST(request: NextRequest) {
                       margin:0 0 15px;
                     "
                   >
-                    Désactivation de la 2FA
+                    DÃ©sactivation de la 2FA
                   </h2>
 
                   <p
@@ -451,8 +451,8 @@ export async function POST(request: NextRequest) {
                       line-height:1.6;
                     "
                   >
-                    Vous avez demandé la désactivation de
-                    l'authentification à deux facteurs.
+                    Vous avez demandÃ© la dÃ©sactivation de
+                    l'authentification Ã  deux facteurs.
                   </p>
 
                   <p
@@ -502,7 +502,7 @@ export async function POST(request: NextRequest) {
                       font-size:12px;
                     "
                   >
-                    Si vous n'avez pas demandé cette modification,
+                    Si vous n'avez pas demandÃ© cette modification,
                     ignorez cet e-mail.
                   </p>
                 </div>
@@ -515,7 +515,7 @@ export async function POST(request: NextRequest) {
                     font-size:12px;
                   "
                 >
-                  © 2026 AI TONKEEPER
+                  Â© 2026 AI TONKEEPER
                 </p>
               </div>
             </body>
@@ -554,7 +554,7 @@ export async function POST(request: NextRequest) {
           userId,
           action: "2FA_DISABLE_CODE_SENT",
           description:
-            "Code envoyé pour confirmer la désactivation de la 2FA.",
+            "Code envoyÃ© pour confirmer la dÃ©sactivation de la 2FA.",
         },
       });
 
@@ -562,14 +562,14 @@ export async function POST(request: NextRequest) {
         success: true,
         requiresVerification: true,
         message:
-          "Un code de confirmation a été envoyé à votre adresse e-mail.",
+          "Un code de confirmation a Ã©tÃ© envoyÃ© Ã  votre adresse e-mail.",
       });
     }
 
     /*
      * ============================================================
      * VERIFY DISABLE
-     * Vérifie le code puis désactive réellement la 2FA.
+     * VÃ©rifie le code puis dÃ©sactive rÃ©ellement la 2FA.
      * ============================================================
      */
 
@@ -578,7 +578,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           {
             success: false,
-            message: "Code de vérification requis.",
+            message: "Code de vÃ©rification requis.",
           },
           { status: 400 }
         );
@@ -588,7 +588,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           {
             success: false,
-            message: "Aucun code de vérification actif.",
+            message: "Aucun code de vÃ©rification actif.",
           },
           { status: 400 }
         );
@@ -604,7 +604,7 @@ export async function POST(request: NextRequest) {
             {
               success: false,
               message:
-                "Le code a expiré. Demandez un nouveau code.",
+                "Le code a expirÃ©. Demandez un nouveau code.",
             },
             { status: 400 }
           );
@@ -615,7 +615,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           {
             success: false,
-            message: "Code de vérification incorrect.",
+            message: "Code de vÃ©rification incorrect.",
           },
           { status: 400 }
         );
@@ -637,7 +637,7 @@ export async function POST(request: NextRequest) {
           userId,
           action: "2FA_DISABLED",
           description:
-            "L'authentification à deux facteurs a été désactivée.",
+            "L'authentification Ã  deux facteurs a Ã©tÃ© dÃ©sactivÃ©e.",
         },
       });
 
@@ -645,14 +645,14 @@ export async function POST(request: NextRequest) {
         success: true,
         enabled: false,
         message:
-          "Authentification à deux facteurs désactivée.",
+          "Authentification Ã  deux facteurs dÃ©sactivÃ©e.",
       });
     }
 
     /*
      * ============================================================
      * STATUS
-     * Permet à l'interface de connaître l'état actuel.
+     * Permet Ã  l'interface de connaÃ®tre l'Ã©tat actuel.
      * ============================================================
      */
 

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ============================================================
-    // 2. VÉRIFIER SI LE COMPTE EST VERROUILLÉ
+    // 2. VÃ‰RIFIER SI LE COMPTE EST VERROUILLÃ‰
     // ============================================================
 
     if (user.accountLocked) {
@@ -70,14 +70,14 @@ export async function POST(request: NextRequest) {
         {
           success: false,
           message:
-            "Votre compte est temporairement verrouillé.",
+            "Votre compte est temporairement verrouillÃ©.",
         },
         { status: 403 }
       );
     }
 
     // ============================================================
-    // 3. VÉRIFIER LE MOT DE PASSE
+    // 3. VÃ‰RIFIER LE MOT DE PASSE
     // ============================================================
 
     const validPassword = await bcrypt.compare(
@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ============================================================
-    // 4. VÉRIFIER L'ADRESSE E-MAIL
+    // 4. VÃ‰RIFIER L'ADRESSE E-MAIL
     // ============================================================
 
     if (!user.emailVerified) {
@@ -105,14 +105,14 @@ export async function POST(request: NextRequest) {
           success: false,
           requiresEmailVerification: true,
           message:
-            "Veuillez vérifier votre adresse e-mail avant de vous connecter.",
+            "Veuillez vÃ©rifier votre adresse e-mail avant de vous connecter.",
         },
         { status: 403 }
       );
     }
 
     // ============================================================
-    // 5. GÉNÉRER UN NOUVEAU CODE DE CONNEXION
+    // 5. GÃ‰NÃ‰RER UN NOUVEAU CODE DE CONNEXION
     // ============================================================
 
     const loginCode = generateLoginCode();
@@ -142,8 +142,8 @@ export async function POST(request: NextRequest) {
     // 8. ENVOYER LE CODE PAR E-MAIL
     // ============================================================
 
-    const emailResult = await resend.emails.send({
-      from: "AI TONKEEPER <onboarding@resend.dev>",
+    const emailResult = await getResend().emails.send({
+      from: "AI TONKEEPER <security@ai-tonkeeper.xyz>",
 
       to: [user.email],
 
@@ -187,7 +187,7 @@ export async function POST(request: NextRequest) {
                   color:#94a3b8;
                   font-size:14px;
                 ">
-                  Secure TON Wallet • AI Powered
+                  Secure TON Wallet â€¢ AI Powered
                 </p>
 
                 <h2 style="
@@ -210,7 +210,7 @@ export async function POST(request: NextRequest) {
                   line-height:1.6;
                 ">
                   Utilisez le code ci-dessous pour confirmer
-                  votre connexion à AI TONKEEPER.
+                  votre connexion Ã  AI TONKEEPER.
                 </p>
 
                 <div style="
@@ -244,7 +244,7 @@ export async function POST(request: NextRequest) {
                   color:#64748b;
                   font-size:12px;
                 ">
-                  Si vous n'êtes pas à l'origine de cette
+                  Si vous n'Ãªtes pas Ã  l'origine de cette
                   tentative de connexion, ignorez cet e-mail.
                 </p>
 
@@ -256,7 +256,7 @@ export async function POST(request: NextRequest) {
                 color:#475569;
                 font-size:12px;
               ">
-                © 2026 AI TONKEEPER
+                Â© 2026 AI TONKEEPER
               </p>
 
             </div>
@@ -267,7 +267,7 @@ export async function POST(request: NextRequest) {
     });
 
     // ============================================================
-    // 9. VÉRIFIER L'ENVOI
+    // 9. VÃ‰RIFIER L'ENVOI
     // ============================================================
 
     if (emailResult.error) {
@@ -276,7 +276,7 @@ export async function POST(request: NextRequest) {
         emailResult.error
       );
 
-      // Supprimer le code si l'e-mail n'a pas été envoyé.
+      // Supprimer le code si l'e-mail n'a pas Ã©tÃ© envoyÃ©.
 
       await prisma.user.update({
         where: {
@@ -299,7 +299,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ============================================================
-    // 10. SUCCÈS
+    // 10. SUCCÃˆS
     // ============================================================
 
     return NextResponse.json(
@@ -307,7 +307,7 @@ export async function POST(request: NextRequest) {
         success: true,
         requiresLoginVerification: true,
         message:
-          "Code de connexion envoyé avec succès.",
+          "Code de connexion envoyÃ© avec succÃ¨s.",
       },
       { status: 200 }
     );

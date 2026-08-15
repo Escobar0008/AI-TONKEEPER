@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 
 import { prisma } from "@/lib/prisma";
@@ -45,7 +45,7 @@ function isCodeExpired(date: Date | null): boolean {
 export async function POST(request: NextRequest) {
   try {
     // ============================================================
-    // 1. Vérifier la session
+    // 1. VÃ©rifier la session
     // ============================================================
 
     const session = await auth();
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          message: "Vous devez être connecté.",
+          message: "Vous devez Ãªtre connectÃ©.",
         },
         { status: 401 }
       );
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
     const userId = String(session.user.id);
 
     // ============================================================
-    // 2. Lire la requête
+    // 2. Lire la requÃªte
     // ============================================================
 
     const body = await request.json();
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
     const code = String(body.code ?? "").trim();
 
     // ============================================================
-    // 3. Récupérer l'utilisateur
+    // 3. RÃ©cupÃ©rer l'utilisateur
     // ============================================================
 
     const user = await prisma.user.findUnique({
@@ -111,8 +111,8 @@ export async function POST(request: NextRequest) {
     // ============================================================
     // ACTION 1 : REQUEST
     //
-    // Vérifie la nouvelle adresse et envoie un code
-    // à l'ancienne adresse.
+    // VÃ©rifie la nouvelle adresse et envoie un code
+    // Ã  l'ancienne adresse.
     // ============================================================
 
     if (action === "request") {
@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
           {
             success: false,
             message:
-              "Cette adresse e-mail est déjà utilisée par votre compte.",
+              "Cette adresse e-mail est dÃ©jÃ  utilisÃ©e par votre compte.",
           },
           { status: 400 }
         );
@@ -169,7 +169,7 @@ export async function POST(request: NextRequest) {
           {
             success: false,
             message:
-              "Cette adresse e-mail est déjà associée à un autre compte.",
+              "Cette adresse e-mail est dÃ©jÃ  associÃ©e Ã  un autre compte.",
           },
           { status: 409 }
         );
@@ -190,15 +190,15 @@ export async function POST(request: NextRequest) {
       });
 
       // ========================================================
-      // Envoyer le premier code à l'ancien e-mail
+      // Envoyer le premier code Ã  l'ancien e-mail
       // ========================================================
 
       const resend = getResend();
 
       const emailResult =
-        await resend.emails.send({
+        await getResend().emails.send({
           from:
-            "AI TONKEEPER <onboarding@resend.dev>",
+            "AI TONKEEPER <security@ai-tonkeeper.xyz>",
 
           to: [user.email],
 
@@ -258,7 +258,7 @@ export async function POST(request: NextRequest) {
                         font-size:14px;
                       "
                     >
-                      Secure TON Wallet • AI Powered
+                      Secure TON Wallet â€¢ AI Powered
                     </p>
 
                     <h2
@@ -277,7 +277,7 @@ export async function POST(request: NextRequest) {
                       "
                     >
                       Une demande de changement
-                      d'adresse e-mail a été effectuée
+                      d'adresse e-mail a Ã©tÃ© effectuÃ©e
                       sur votre compte.
                     </p>
 
@@ -288,7 +288,7 @@ export async function POST(request: NextRequest) {
                         line-height:1.6;
                       "
                     >
-                      Nouvelle adresse demandée :
+                      Nouvelle adresse demandÃ©e :
                     </p>
 
                     <p
@@ -349,9 +349,9 @@ export async function POST(request: NextRequest) {
                         font-size:12px;
                       "
                     >
-                      Si vous n'êtes pas à l'origine
+                      Si vous n'Ãªtes pas Ã  l'origine
                       de cette demande, ne partagez pas
-                      ce code et sécurisez votre compte.
+                      ce code et sÃ©curisez votre compte.
                     </p>
                   </div>
 
@@ -363,7 +363,7 @@ export async function POST(request: NextRequest) {
                       font-size:12px;
                     "
                   >
-                    © 2026 AI TONKEEPER
+                    Â© 2026 AI TONKEEPER
                   </p>
                 </div>
               </body>
@@ -392,7 +392,7 @@ export async function POST(request: NextRequest) {
           {
             success: false,
             message:
-              "Impossible d'envoyer le code de vérification.",
+              "Impossible d'envoyer le code de vÃ©rification.",
           },
           { status: 500 }
         );
@@ -406,7 +406,7 @@ export async function POST(request: NextRequest) {
             "EMAIL_CHANGE_OLD_EMAIL_CODE_SENT",
 
           description:
-            "Un code de vérification a été envoyé à l'ancienne adresse e-mail pour autoriser le changement d'adresse.",
+            "Un code de vÃ©rification a Ã©tÃ© envoyÃ© Ã  l'ancienne adresse e-mail pour autoriser le changement d'adresse.",
 
           ipAddress,
           userAgent,
@@ -419,15 +419,15 @@ export async function POST(request: NextRequest) {
         requiresOldEmailVerification: true,
 
         message:
-          "Un code de vérification a été envoyé à votre ancienne adresse e-mail.",
+          "Un code de vÃ©rification a Ã©tÃ© envoyÃ© Ã  votre ancienne adresse e-mail.",
       });
     }
 
     // ============================================================
     // ACTION 2 : VERIFY OLD
     //
-    // Vérifie le code reçu sur l'ancienne adresse.
-    // Aucun changement d'e-mail n'est encore effectué.
+    // VÃ©rifie le code reÃ§u sur l'ancienne adresse.
+    // Aucun changement d'e-mail n'est encore effectuÃ©.
     // ============================================================
 
     if (action === "verify-old") {
@@ -436,7 +436,7 @@ export async function POST(request: NextRequest) {
           {
             success: false,
             message:
-              "Le code de vérification doit contenir 6 chiffres.",
+              "Le code de vÃ©rification doit contenir 6 chiffres.",
           },
           { status: 400 }
         );
@@ -477,7 +477,7 @@ export async function POST(request: NextRequest) {
           {
             success: false,
             message:
-              "Le code a expiré. Veuillez recommencer la procédure.",
+              "Le code a expirÃ©. Veuillez recommencer la procÃ©dure.",
           },
           { status: 400 }
         );
@@ -505,7 +505,7 @@ export async function POST(request: NextRequest) {
           {
             success: false,
             message:
-              "Code de vérification incorrect.",
+              "Code de vÃ©rification incorrect.",
           },
           { status: 400 }
         );
@@ -528,15 +528,15 @@ export async function POST(request: NextRequest) {
       });
 
       // ========================================================
-      // Envoyer le second code à la nouvelle adresse
+      // Envoyer le second code Ã  la nouvelle adresse
       // ========================================================
 
       const resend = getResend();
 
       const emailResult =
-        await resend.emails.send({
+        await getResend().emails.send({
           from:
-            "AI TONKEEPER <onboarding@resend.dev>",
+            "AI TONKEEPER <security@ai-tonkeeper.xyz>",
 
           to: [pendingEmail],
 
@@ -596,7 +596,7 @@ export async function POST(request: NextRequest) {
                         font-size:14px;
                       "
                     >
-                      Secure TON Wallet • AI Powered
+                      Secure TON Wallet â€¢ AI Powered
                     </p>
 
                     <h2>
@@ -611,7 +611,7 @@ export async function POST(request: NextRequest) {
                       "
                     >
                       Votre ancienne adresse e-mail
-                      a été vérifiée avec succès.
+                      a Ã©tÃ© vÃ©rifiÃ©e avec succÃ¨s.
                     </p>
 
                     <p
@@ -622,7 +622,7 @@ export async function POST(request: NextRequest) {
                       "
                     >
                       Utilisez le code ci-dessous pour
-                      confirmer que vous avez accès à
+                      confirmer que vous avez accÃ¨s Ã 
                       cette nouvelle adresse.
                     </p>
 
@@ -665,7 +665,7 @@ export async function POST(request: NextRequest) {
                       font-size:12px;
                     "
                   >
-                    © 2026 AI TONKEEPER
+                    Â© 2026 AI TONKEEPER
                   </p>
                 </div>
               </body>
@@ -694,7 +694,7 @@ export async function POST(request: NextRequest) {
           {
             success: false,
             message:
-              "Impossible d'envoyer le code à la nouvelle adresse e-mail.",
+              "Impossible d'envoyer le code Ã  la nouvelle adresse e-mail.",
           },
           { status: 500 }
         );
@@ -708,7 +708,7 @@ export async function POST(request: NextRequest) {
             "EMAIL_CHANGE_NEW_EMAIL_CODE_SENT",
 
           description:
-            "L'ancienne adresse e-mail a été vérifiée. Un second code a été envoyé à la nouvelle adresse.",
+            "L'ancienne adresse e-mail a Ã©tÃ© vÃ©rifiÃ©e. Un second code a Ã©tÃ© envoyÃ© Ã  la nouvelle adresse.",
 
           ipAddress,
           userAgent,
@@ -721,14 +721,14 @@ export async function POST(request: NextRequest) {
         requiresNewEmailVerification: true,
 
         message:
-          "Votre ancienne adresse a été vérifiée. Un code a été envoyé à la nouvelle adresse e-mail.",
+          "Votre ancienne adresse a Ã©tÃ© vÃ©rifiÃ©e. Un code a Ã©tÃ© envoyÃ© Ã  la nouvelle adresse e-mail.",
       });
     }
 
     // ============================================================
     // ACTION 3 : VERIFY NEW
     //
-    // C'est uniquement ici que le changement devient définitif.
+    // C'est uniquement ici que le changement devient dÃ©finitif.
     // ============================================================
 
     if (action === "verify-new") {
@@ -737,7 +737,7 @@ export async function POST(request: NextRequest) {
           {
             success: false,
             message:
-              "Le code de vérification doit contenir 6 chiffres.",
+              "Le code de vÃ©rification doit contenir 6 chiffres.",
           },
           { status: 400 }
         );
@@ -778,7 +778,7 @@ export async function POST(request: NextRequest) {
           {
             success: false,
             message:
-              "Le code a expiré. Veuillez recommencer la procédure.",
+              "Le code a expirÃ©. Veuillez recommencer la procÃ©dure.",
           },
           { status: 400 }
         );
@@ -795,7 +795,7 @@ export async function POST(request: NextRequest) {
               "EMAIL_CHANGE_NEW_EMAIL_CODE_FAILED",
 
             description:
-              "Tentative avec un code incorrect envoyé à la nouvelle adresse e-mail.",
+              "Tentative avec un code incorrect envoyÃ© Ã  la nouvelle adresse e-mail.",
 
             ipAddress,
             userAgent,
@@ -806,7 +806,7 @@ export async function POST(request: NextRequest) {
           {
             success: false,
             message:
-              "Code de vérification incorrect.",
+              "Code de vÃ©rification incorrect.",
           },
           { status: 400 }
         );
@@ -815,7 +815,7 @@ export async function POST(request: NextRequest) {
       const finalEmail =
         user.emailChangePendingEmail;
 
-      // Dernière vérification d'unicité.
+      // DerniÃ¨re vÃ©rification d'unicitÃ©.
       const existingUser =
         await prisma.user.findUnique({
           where: {
@@ -845,14 +845,14 @@ export async function POST(request: NextRequest) {
           {
             success: false,
             message:
-              "Cette adresse e-mail est déjà utilisée par un autre compte.",
+              "Cette adresse e-mail est dÃ©jÃ  utilisÃ©e par un autre compte.",
           },
           { status: 409 }
         );
       }
 
       // ========================================================
-      // Changement définitif
+      // Changement dÃ©finitif
       // ========================================================
 
       await prisma.$transaction([
@@ -863,7 +863,7 @@ export async function POST(request: NextRequest) {
           data: {
             email: finalEmail,
 
-            // La nouvelle adresse vient d'être vérifiée.
+            // La nouvelle adresse vient d'Ãªtre vÃ©rifiÃ©e.
             emailVerified: true,
 
             emailChangePendingEmail: null,
@@ -880,7 +880,7 @@ export async function POST(request: NextRequest) {
               "EMAIL_CHANGED",
 
             description:
-              "L'adresse e-mail a été modifiée après vérification de l'ancienne et de la nouvelle adresse.",
+              "L'adresse e-mail a Ã©tÃ© modifiÃ©e aprÃ¨s vÃ©rification de l'ancienne et de la nouvelle adresse.",
 
             ipAddress,
             userAgent,
@@ -892,7 +892,7 @@ export async function POST(request: NextRequest) {
         success: true,
 
         message:
-          "Adresse e-mail modifiée avec succès.",
+          "Adresse e-mail modifiÃ©e avec succÃ¨s.",
       });
     }
 
@@ -917,7 +917,7 @@ export async function POST(request: NextRequest) {
       {
         success: false,
         message:
-          "Une erreur serveur est survenue. Veuillez réessayer.",
+          "Une erreur serveur est survenue. Veuillez rÃ©essayer.",
       },
       { status: 500 }
     );

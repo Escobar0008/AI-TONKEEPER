@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getResend } from "@/lib/resend";
 
@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
         {
           success: false,
           message:
-            "Aucun compte trouvé avec cette adresse e-mail.",
+            "Aucun compte trouvÃ© avec cette adresse e-mail.",
         },
         { status: 404 }
       );
@@ -50,10 +50,10 @@ export async function POST(request: NextRequest) {
     });
 
     await getResend().emails.send({
-      from: "AI TONKEEPER <onboarding@resend.dev>",
+      from: "AI TONKEEPER <security@ai-tonkeeper.xyz>",
       to: normalizedEmail,
       subject:
-        "Réinitialisation du mot de passe AI TONKEEPER",
+        "RÃ©initialisation du mot de passe AI TONKEEPER",
       html: `
         <div style="
           font-family:Arial,Helvetica,sans-serif;
@@ -79,11 +79,11 @@ export async function POST(request: NextRequest) {
             </h2>
 
             <h3>
-              Réinitialisation du mot de passe
+              RÃ©initialisation du mot de passe
             </h3>
 
             <p style="color:#cbd5e1;">
-              Votre code de vérification est :
+              Votre code de vÃ©rification est :
             </p>
 
             <div style="
@@ -114,8 +114,8 @@ export async function POST(request: NextRequest) {
               color:#64748b;
               font-size:13px;
             ">
-              Si vous n'avez pas demandé cette
-              réinitialisation, ignorez cet e-mail.
+              Si vous n'avez pas demandÃ© cette
+              rÃ©initialisation, ignorez cet e-mail.
             </p>
 
           </div>
@@ -127,7 +127,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         success: true,
-        message: "Code envoyé avec succès.",
+        message: "Code envoyÃ© avec succÃ¨s.",
       },
       { status: 200 }
     );

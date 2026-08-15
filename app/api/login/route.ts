@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { getResend } from "@/lib/resend";
@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     const resendCode = body.resend === true;
 
     // ============================================================
-    // 1. VÉRIFICATION DE L'EMAIL
+    // 1. VÃ‰RIFICATION DE L'EMAIL
     // ============================================================
 
     if (!email) {
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ============================================================
-    // 3. VÉRIFICATION DU COMPTE
+    // 3. VÃ‰RIFICATION DU COMPTE
     // ============================================================
 
     if (user.accountLocked) {
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
         {
           success: false,
           message:
-            "Votre compte est temporairement verrouillé.",
+            "Votre compte est temporairement verrouillÃ©.",
         },
         { status: 403 }
       );
@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
       }
 
       // ==========================================================
-      // 5. VÉRIFICATION DE L'ADRESSE EMAIL
+      // 5. VÃ‰RIFICATION DE L'ADRESSE EMAIL
       // ==========================================================
 
       if (!user.emailVerified) {
@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
             success: false,
             requiresEmailVerification: true,
             message:
-              "Veuillez vérifier votre adresse e-mail avant de vous connecter.",
+              "Veuillez vÃ©rifier votre adresse e-mail avant de vous connecter.",
           },
           { status: 403 }
         );
@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ============================================================
-    // 6. GÉNÉRER LE CODE DE CONNEXION
+    // 6. GÃ‰NÃ‰RER LE CODE DE CONNEXION
     // ============================================================
 
     const loginCode = Math.floor(
@@ -150,8 +150,8 @@ export async function POST(request: NextRequest) {
     // 9. ENVOYER LE CODE PAR EMAIL
     // ============================================================
 
-    const emailResult = await resend.emails.send({
-      from: "AI TONKEEPER <onboarding@resend.dev>",
+    const emailResult = await getResend().emails.send({
+      from: "AI TONKEEPER <security@ai-tonkeeper.xyz>",
 
       to: [email],
 
@@ -220,7 +220,7 @@ export async function POST(request: NextRequest) {
                     font-size:14px;
                   "
                 >
-                  Secure TON Wallet • AI Powered
+                  Secure TON Wallet â€¢ AI Powered
                 </p>
 
                 <h2
@@ -240,7 +240,7 @@ export async function POST(request: NextRequest) {
                   "
                 >
                   Utilisez le code ci-dessous pour
-                  confirmer votre connexion à
+                  confirmer votre connexion Ã 
                   AI TONKEEPER.
                 </p>
 
@@ -285,7 +285,7 @@ export async function POST(request: NextRequest) {
                     font-size:12px;
                   "
                 >
-                  Si vous n'êtes pas à l'origine
+                  Si vous n'Ãªtes pas Ã  l'origine
                   de cette tentative de connexion,
                   vous pouvez ignorer cet e-mail.
                 </p>
@@ -300,7 +300,7 @@ export async function POST(request: NextRequest) {
                   font-size:12px;
                 "
               >
-                © 2026 AI TONKEEPER
+                Â© 2026 AI TONKEEPER
               </p>
 
             </div>
@@ -312,7 +312,7 @@ export async function POST(request: NextRequest) {
     });
 
     // ============================================================
-    // 10. VÉRIFIER L'ENVOI RESEND
+    // 10. VÃ‰RIFIER L'ENVOI RESEND
     // ============================================================
 
     if (emailResult.error) {
@@ -321,7 +321,7 @@ export async function POST(request: NextRequest) {
         emailResult.error
       );
 
-      // Supprimer le code s'il n'a pas été envoyé.
+      // Supprimer le code s'il n'a pas Ã©tÃ© envoyÃ©.
 
       await prisma.user.update({
         where: {
@@ -344,7 +344,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ============================================================
-    // 11. SUCCÈS
+    // 11. SUCCÃˆS
     // ============================================================
 
     return NextResponse.json(
@@ -352,8 +352,8 @@ export async function POST(request: NextRequest) {
         success: true,
         requiresLoginVerification: true,
         message: resendCode
-          ? "Code renvoyé avec succès."
-          : "Code envoyé avec succès.",
+          ? "Code renvoyÃ© avec succÃ¨s."
+          : "Code envoyÃ© avec succÃ¨s.",
       },
       { status: 200 }
     );

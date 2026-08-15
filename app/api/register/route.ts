@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getResend } from "@/lib/resend";
 import bcrypt from "bcryptjs";
@@ -28,7 +28,7 @@ export async function POST(request: Request) {
     if (existingUser) {
       return NextResponse.json(
         {
-          error: "Cette adresse e-mail est déjà utilisée.",
+          error: "Cette adresse e-mail est dÃ©jÃ  utilisÃ©e.",
         },
         { status: 409 }
       );
@@ -102,8 +102,8 @@ export async function POST(request: Request) {
 
     const resend = getResend();
 
-    const emailResult = await resend.emails.send({
-      from: "AI TONKEEPER <onboarding@resend.dev>",
+    const emailResult = await getResend().emails.send({
+      from: "AI TONKEEPER <security@ai-tonkeeper.xyz>",
 
       to: [normalizedEmail],
 
@@ -172,7 +172,7 @@ export async function POST(request: Request) {
                     font-size:14px;
                   "
                 >
-                  Secure TON Wallet • AI Powered
+                  Secure TON Wallet â€¢ AI Powered
                 </p>
 
                 <h2
@@ -259,7 +259,7 @@ export async function POST(request: Request) {
                   font-size:12px;
                 "
               >
-                © 2026 AI TONKEEPER
+                Â© 2026 AI TONKEEPER
               </p>
 
             </div>
@@ -271,7 +271,7 @@ export async function POST(request: Request) {
     });
 
     // ============================================================
-    // VÉRIFICATION DE L'ENVOI
+    // VÃ‰RIFICATION DE L'ENVOI
     // ============================================================
 
     if (emailResult.error) {
@@ -284,7 +284,7 @@ export async function POST(request: Request) {
         {
           success: false,
           message:
-            "Compte créé, mais impossible d'envoyer l'e-mail de vérification.",
+            "Compte crÃ©Ã©, mais impossible d'envoyer l'e-mail de vÃ©rification.",
           user: {
             id: user.id,
             name: user.name,
@@ -297,14 +297,14 @@ export async function POST(request: Request) {
     }
 
     // ============================================================
-    // SUCCÈS
+    // SUCCÃˆS
     // ============================================================
 
     return NextResponse.json(
       {
         success: true,
         message:
-          "Compte créé avec succès. Vérifiez votre adresse e-mail.",
+          "Compte crÃ©Ã© avec succÃ¨s. VÃ©rifiez votre adresse e-mail.",
 
         user: {
           id: user.id,

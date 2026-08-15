@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 
 import { prisma } from "@/lib/prisma";
@@ -360,9 +360,9 @@ export async function POST(request: NextRequest) {
         const resend = getResend();
 
         const emailResult =
-          await resend.emails.send({
+          await getResend().emails.send({
             from:
-              "AI TONKEEPER <onboarding@resend.dev>",
+              "AI TONKEEPER <security@ai-tonkeeper.xyz>",
             to: user.email,
             subject:
               "AI TONKEEPER - PIN Reset Code",

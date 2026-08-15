@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 
 import { auth } from "@/auth";
@@ -78,7 +78,7 @@ function isCodeExpired(date: Date | null): boolean {
 export async function POST(request: NextRequest) {
   try {
     // ============================================================
-    // 1. VÉRIFIER LA SESSION
+    // 1. VÃ‰RIFIER LA SESSION
     // ============================================================
 
     const session = await auth();
@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          message: "Vous devez être connecté.",
+          message: "Vous devez Ãªtre connectÃ©.",
         },
         { status: 401 }
       );
@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
     const resend = getResend();
 
     // ============================================================
-    // 3. LIRE LA REQUÊTE
+    // 3. LIRE LA REQUÃŠTE
     // ============================================================
 
     const body = await request.json().catch(() => ({}));
@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
         : "";
 
     // ============================================================
-    // 4. INFORMATIONS DE SÉCURITÉ
+    // 4. INFORMATIONS DE SÃ‰CURITÃ‰
     // ============================================================
 
     const {
@@ -144,7 +144,7 @@ export async function POST(request: NextRequest) {
       getDeviceType(currentUserAgent);
 
     // ============================================================
-    // 5. RÉCUPÉRER L'UTILISATEUR
+    // 5. RÃ‰CUPÃ‰RER L'UTILISATEUR
     // ============================================================
 
     const user = await prisma.user.findUnique({
@@ -171,7 +171,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ============================================================
-    // 6. VÉRIFIER L'EMAIL
+    // 6. VÃ‰RIFIER L'EMAIL
     // ============================================================
 
     if (!user.email) {
@@ -179,7 +179,7 @@ export async function POST(request: NextRequest) {
         {
           success: false,
           message:
-            "Aucune adresse e-mail associée à ce compte.",
+            "Aucune adresse e-mail associÃ©e Ã  ce compte.",
         },
         { status: 400 }
       );
@@ -190,7 +190,7 @@ export async function POST(request: NextRequest) {
         {
           success: false,
           message:
-            "Votre adresse e-mail doit être vérifiée.",
+            "Votre adresse e-mail doit Ãªtre vÃ©rifiÃ©e.",
         },
         { status: 400 }
       );
@@ -200,12 +200,12 @@ export async function POST(request: NextRequest) {
     // ACTION REGISTER
     //
     // Enregistre le nouvel appareil et envoie
-    // un code de vérification par e-mail.
+    // un code de vÃ©rification par e-mail.
     // ============================================================
 
     if (action === "register") {
       // ----------------------------------------------------------
-      // Générer un code sécurisé
+      // GÃ©nÃ©rer un code sÃ©curisÃ©
       // ----------------------------------------------------------
 
       const verificationCode =
@@ -215,7 +215,7 @@ export async function POST(request: NextRequest) {
         new Date();
 
       // ----------------------------------------------------------
-      // Créer l'appareil
+      // CrÃ©er l'appareil
       // ----------------------------------------------------------
 
       const device =
@@ -246,7 +246,7 @@ export async function POST(request: NextRequest) {
       });
 
       // ----------------------------------------------------------
-      // Sécuriser les valeurs affichées dans l'email
+      // SÃ©curiser les valeurs affichÃ©es dans l'email
       // ----------------------------------------------------------
 
       const safeDeviceName =
@@ -261,14 +261,14 @@ export async function POST(request: NextRequest) {
 
       try {
         const emailResult =
-          await resend.emails.send({
+          await getResend().emails.send({
             from:
-              "AI TONKEEPER <onboarding@resend.dev>",
+              "AI TONKEEPER <security@ai-tonkeeper.xyz>",
 
             to: [user.email],
 
             subject:
-              "Nouvelle connexion détectée - AI TONKEEPER",
+              "Nouvelle connexion dÃ©tectÃ©e - AI TONKEEPER",
 
             html: `
               <!DOCTYPE html>
@@ -333,7 +333,7 @@ export async function POST(request: NextRequest) {
                           font-size:14px;
                         "
                       >
-                        Secure TON Wallet • AI Powered
+                        Secure TON Wallet â€¢ AI Powered
                       </p>
 
                       <h2
@@ -342,7 +342,7 @@ export async function POST(request: NextRequest) {
                           color:#ffffff;
                         "
                       >
-                        Nouvelle connexion détectée
+                        Nouvelle connexion dÃ©tectÃ©e
                       </h2>
 
                       <p
@@ -354,7 +354,7 @@ export async function POST(request: NextRequest) {
                       >
                         Une tentative de connexion
                         depuis un nouvel appareil
-                        a été détectée.
+                        a Ã©tÃ© dÃ©tectÃ©e.
                       </p>
 
                       <div
@@ -418,7 +418,7 @@ export async function POST(request: NextRequest) {
                           line-height:1.6;
                         "
                       >
-                        Votre code de vérification est :
+                        Votre code de vÃ©rification est :
                       </p>
 
                       <div
@@ -463,10 +463,10 @@ export async function POST(request: NextRequest) {
                           line-height:1.6;
                         "
                       >
-                        Si vous n'êtes pas à l'origine
+                        Si vous n'Ãªtes pas Ã  l'origine
                         de cette connexion, ne partagez
-                        pas ce code et sécurisez
-                        immédiatement votre compte.
+                        pas ce code et sÃ©curisez
+                        immÃ©diatement votre compte.
                       </p>
 
                     </div>
@@ -479,7 +479,7 @@ export async function POST(request: NextRequest) {
                         font-size:12px;
                       "
                     >
-                      © 2026 AI TONKEEPER
+                      Â© 2026 AI TONKEEPER
                     </p>
 
                   </div>
@@ -491,7 +491,7 @@ export async function POST(request: NextRequest) {
           });
 
         // --------------------------------------------------------
-        // Vérifier une éventuelle erreur Resend
+        // VÃ©rifier une Ã©ventuelle erreur Resend
         // --------------------------------------------------------
 
         if (emailResult.error) {
@@ -520,7 +520,7 @@ export async function POST(request: NextRequest) {
             {
               success: false,
               message:
-                "Impossible d'envoyer le code de vérification.",
+                "Impossible d'envoyer le code de vÃ©rification.",
             },
             { status: 500 }
           );
@@ -532,7 +532,7 @@ export async function POST(request: NextRequest) {
         );
 
         // --------------------------------------------------------
-        // Nettoyage si l'envoi échoue
+        // Nettoyage si l'envoi Ã©choue
         // --------------------------------------------------------
 
         await prisma.user.update({
@@ -555,7 +555,7 @@ export async function POST(request: NextRequest) {
           {
             success: false,
             message:
-              "Impossible d'envoyer le code de vérification.",
+              "Impossible d'envoyer le code de vÃ©rification.",
           },
           { status: 500 }
         );
@@ -571,7 +571,7 @@ export async function POST(request: NextRequest) {
           action:
             "NEW_DEVICE_CODE_SENT",
           description:
-            `Code envoyé pour vérifier le nouvel appareil : ${deviceName}.`,
+            `Code envoyÃ© pour vÃ©rifier le nouvel appareil : ${deviceName}.`,
           ipAddress,
           userAgent:
             currentUserAgent,
@@ -583,19 +583,19 @@ export async function POST(request: NextRequest) {
         requiresVerification: true,
         deviceId: device.id,
         message:
-          "Un code de vérification a été envoyé à votre adresse e-mail.",
+          "Un code de vÃ©rification a Ã©tÃ© envoyÃ© Ã  votre adresse e-mail.",
       });
     }
 
     // ============================================================
     // ACTION VERIFY
     //
-    // Vérifie le code et rend l'appareil fiable.
+    // VÃ©rifie le code et rend l'appareil fiable.
     // ============================================================
 
     if (action === "verify") {
       // ----------------------------------------------------------
-      // Vérifier le code
+      // VÃ©rifier le code
       // ----------------------------------------------------------
 
       if (!code) {
@@ -603,7 +603,7 @@ export async function POST(request: NextRequest) {
           {
             success: false,
             message:
-              "Code de vérification requis.",
+              "Code de vÃ©rification requis.",
           },
           { status: 400 }
         );
@@ -621,7 +621,7 @@ export async function POST(request: NextRequest) {
       }
 
       // ----------------------------------------------------------
-      // Vérifier deviceId
+      // VÃ©rifier deviceId
       // ----------------------------------------------------------
 
       if (!deviceId) {
@@ -629,14 +629,14 @@ export async function POST(request: NextRequest) {
           {
             success: false,
             message:
-              "Appareil non spécifié.",
+              "Appareil non spÃ©cifiÃ©.",
           },
           { status: 400 }
         );
       }
 
       // ----------------------------------------------------------
-      // Récupérer l'appareil
+      // RÃ©cupÃ©rer l'appareil
       // ----------------------------------------------------------
 
       const device =
@@ -659,7 +659,7 @@ export async function POST(request: NextRequest) {
       }
 
       // ----------------------------------------------------------
-      // Vérifier le code actif
+      // VÃ©rifier le code actif
       // ----------------------------------------------------------
 
       if (!user.verificationCode) {
@@ -667,14 +667,14 @@ export async function POST(request: NextRequest) {
           {
             success: false,
             message:
-              "Aucun code de vérification actif. Demandez un nouveau code.",
+              "Aucun code de vÃ©rification actif. Demandez un nouveau code.",
           },
           { status: 400 }
         );
       }
 
       // ----------------------------------------------------------
-      // Vérifier la date
+      // VÃ©rifier la date
       // ----------------------------------------------------------
 
       if (!user.verificationSent) {
@@ -682,7 +682,7 @@ export async function POST(request: NextRequest) {
           {
             success: false,
             message:
-              "Aucune vérification active. Demandez un nouveau code.",
+              "Aucune vÃ©rification active. Demandez un nouveau code.",
           },
           { status: 400 }
         );
@@ -707,14 +707,14 @@ export async function POST(request: NextRequest) {
           {
             success: false,
             message:
-              "Le code a expiré. Demandez un nouveau code.",
+              "Le code a expirÃ©. Demandez un nouveau code.",
           },
           { status: 400 }
         );
       }
 
       // ----------------------------------------------------------
-      // Vérifier le code
+      // VÃ©rifier le code
       // ----------------------------------------------------------
 
       if (
@@ -726,7 +726,7 @@ export async function POST(request: NextRequest) {
             action:
               "NEW_DEVICE_CODE_FAILED",
             description:
-              `Code incorrect utilisé pour vérifier l'appareil : ${device.deviceName}.`,
+              `Code incorrect utilisÃ© pour vÃ©rifier l'appareil : ${device.deviceName}.`,
             ipAddress,
             userAgent:
               currentUserAgent,
@@ -737,14 +737,14 @@ export async function POST(request: NextRequest) {
           {
             success: false,
             message:
-              "Code de vérification incorrect.",
+              "Code de vÃ©rification incorrect.",
           },
           { status: 400 }
         );
       }
 
       // ==========================================================
-      // VÉRIFICATION RÉUSSIE
+      // VÃ‰RIFICATION RÃ‰USSIE
       // ==========================================================
 
       await prisma.$transaction([
@@ -774,7 +774,7 @@ export async function POST(request: NextRequest) {
             action:
               "NEW_DEVICE_VERIFIED",
             description:
-              `Nouvel appareil vérifié avec succès : ${device.deviceName}.`,
+              `Nouvel appareil vÃ©rifiÃ© avec succÃ¨s : ${device.deviceName}.`,
             ipAddress,
             userAgent:
               currentUserAgent,
@@ -787,7 +787,7 @@ export async function POST(request: NextRequest) {
         verified: true,
         trusted: true,
         message:
-          "Nouvel appareil vérifié avec succès.",
+          "Nouvel appareil vÃ©rifiÃ© avec succÃ¨s.",
       });
     }
 
@@ -812,7 +812,7 @@ export async function POST(request: NextRequest) {
       {
         success: false,
         message:
-          "Une erreur serveur est survenue. Veuillez réessayer.",
+          "Une erreur serveur est survenue. Veuillez rÃ©essayer.",
       },
       { status: 500 }
     );
