@@ -1,12 +1,10 @@
 "use client";
-
 import {
   useCallback,
   useEffect,
   useMemo,
   useState,
 } from "react";
-
 type Candle = {
   time: number;
   open: number;
@@ -16,21 +14,19 @@ type Candle = {
   volume: number;
   turnover: number;
 };
-
 type MarketApiResponse = {
   success?: boolean;
   market?: boolean;
   source?: string;
+  cached?: boolean;
   symbol?: string;
   interval?: number;
   candles?: Candle[];
   message?: string;
 };
-
 type TradingChartProps = {
   symbol?: string;
 };
-
 const PERIODS = [
   { label: "1m", minutes: 1 },
   { label: "5m", minutes: 5 },
@@ -40,14 +36,22 @@ const PERIODS = [
   { label: "4H", minutes: 240 },
   { label: "1D", minutes: 1440 },
 ] as const;
-
+/*
+|--------------------------------------------------------------------------
+| Market refresh
+|--------------------------------------------------------------------------
+|
+| CoinGecko public API must not be polled every few seconds.
+| The API route also has its own cache.
+|--------------------------------------------------------------------------
+*/
+const MARKET_REFRESH_MS = 60_000;
 function formatPrice(
   value: number
 ): string {
   if (!Number.isFinite(value)) {
     return "0";
   }
-
   if (value >= 1000) {
     return value.toLocaleString(
       "en-US",
@@ -57,7 +61,6 @@ function formatPrice(
       }
     );
   }
-
   if (value >= 1) {
     return value.toLocaleString(
       "en-US",
@@ -67,7 +70,6 @@ function formatPrice(
       }
     );
   }
-
   return value.toLocaleString(
     "en-US",
     {
@@ -76,14 +78,12 @@ function formatPrice(
     }
   );
 }
-
 function formatTime(
   timestamp: number,
   intervalMinutes: number
 ): string {
   const date =
     new Date(timestamp);
-
   if (
     intervalMinutes >= 1440
   ) {
@@ -95,7 +95,6 @@ function formatTime(
       }
     );
   }
-
   return date.toLocaleTimeString(
     "en-US",
     {
@@ -105,25 +104,21 @@ function formatTime(
     }
   );
 }
-
 export default function TradingChart({
   symbol = "BTCUSDT",
 }: TradingChartProps) {
   const [period, setPeriod] =
     useState("15m");
-
   const [candles, setCandles] =
     useState<Candle[]>([]);
-
   const [loading, setLoading] =
     useState(true);
-
   const [error, setError] =
     useState("");
-
   const [liveConnected, setLiveConnected] =
     useState(false);
-
+  const [refreshing, setRefreshing] =
+    useState(false);
   const selectedPeriod =
     useMemo(() => {
       return (
@@ -131,26 +126,9 @@ export default function TradingChart({
           (item) =>
             item.label ===
             period
-        ) ??
-        PERIODS[2]
+        ) ?? PERIODS[2]
       );
     }, [period]);
-
-  /*
-  |--------------------------------------------------------------------------
-  | LOAD MARKET DATA
-  |--------------------------------------------------------------------------
-  |
-  | Browser -> AI TONKEEPER
-  |
-  | AI TONKEEPER -> Binance PUBLIC API
-  |
-  | No Binance account.
-  | No API key.
-  |
-  |--------------------------------------------------------------------------
-  */
-
   const loadCandles =
     useCallback(
       async (
@@ -159,10 +137,9 @@ export default function TradingChart({
         try {
           if (showLoading) {
             setLoading(true);
+          } else {
+            setRefreshing(true);
           }
-
-          setError("");
-
           const url =
             `/api/ai-trade?market=true` +
             `&symbol=${encodeURIComponent(
@@ -170,7 +147,6 @@ export default function TradingChart({
             )}` +
             `&interval=${selectedPeriod.minutes}` +
             `&limit=200`;
-
           const response =
             await fetch(url, {
               method: "GET",
@@ -180,9 +156,7 @@ export default function TradingChart({
                   "application/json",
               },
             });
-
           let data: MarketApiResponse;
-
           try {
             data =
               (await response.json()) as MarketApiResponse;
@@ -191,14 +165,12 @@ export default function TradingChart({
               "AI TONKEEPER returned an invalid market response."
             );
           }
-
           if (!response.ok) {
             throw new Error(
               data?.message ??
                 `Market API error (${response.status}).`
             );
           }
-
           if (
             data?.success !==
             true
@@ -208,22 +180,20 @@ export default function TradingChart({
                 "AI TONKEEPER could not load real market data."
             );
           }
-
           const nextCandles =
             Array.isArray(
-              data?.candles
+              data.candles
             )
               ? data.candles
               : [];
-
           if (
-            nextCandles.length === 0
+            nextCandles.length ===
+            0
           ) {
             throw new Error(
-              "No real market data available from AI TONKEEPER."
+              "No real market data available."
             );
           }
-
           const normalized =
             nextCandles
               .map(
@@ -231,28 +201,22 @@ export default function TradingChart({
                   time: Number(
                     candle.time
                   ),
-
                   open: Number(
                     candle.open
                   ),
-
                   high: Number(
                     candle.high
                   ),
-
                   low: Number(
                     candle.low
                   ),
-
                   close: Number(
                     candle.close
                   ),
-
                   volume: Number(
                     candle.volume ??
                       0
                   ),
-
                   turnover: Number(
                     candle.turnover ??
                       0
@@ -281,43 +245,61 @@ export default function TradingChart({
               )
               .sort(
                 (a, b) =>
-                  a.time - b.time
+                  a.time -
+                  b.time
               )
               .slice(-200);
-
           if (
             normalized.length ===
             0
           ) {
             throw new Error(
-              "No valid real market candles received from AI TONKEEPER."
+              "No valid real market candles received."
             );
           }
-
           setCandles(
             normalized
           );
-
+          /*
+           * A cached CoinGecko response is still
+           * valid real market data.
+           */
           setLiveConnected(
             true
           );
+          setError("");
         } catch (err) {
           console.error(
             "AI TONKEEPER TRADING CHART ERROR:",
             err
           );
-
+          /*
+           * Keep the last valid candles.
+           * Temporary CoinGecko 429 errors must
+           * not erase the chart.
+           */
           setLiveConnected(
             false
           );
-
-          setError(
-            err instanceof Error
-              ? err.message
-              : "Unable to load real market data."
+          setCandles(
+            (current) => {
+              if (
+                current.length ===
+                0
+              ) {
+                setError(
+                  err instanceof
+                    Error
+                    ? err.message
+                    : "Unable to load real market data."
+                );
+              }
+              return current;
+            }
           );
         } finally {
           setLoading(false);
+          setRefreshing(false);
         }
       },
       [
@@ -325,54 +307,29 @@ export default function TradingChart({
         selectedPeriod.minutes,
       ]
     );
-
-  /*
-  |--------------------------------------------------------------------------
-  | INITIAL LOAD + LIVE REFRESH
-  |--------------------------------------------------------------------------
-  |
-  | Refresh every 1 second.
-  |
-  | The current Binance candle can therefore move
-  | as new market data arrives.
-  |
-  |--------------------------------------------------------------------------
-  */
-
   useEffect(() => {
     void loadCandles(true);
-
-    const interval =
-      window.setInterval(() => {
-        void loadCandles(false);
-      }, 1000);
-
+    const intervalId =
+      window.setInterval(
+        () => {
+          void loadCandles(
+            false
+          );
+        },
+        MARKET_REFRESH_MS
+      );
     return () => {
       window.clearInterval(
-        interval
+        intervalId
       );
     };
   }, [loadCandles]);
-
-  /*
-  |--------------------------------------------------------------------------
-  | LATEST
-  |--------------------------------------------------------------------------
-  */
-
   const latest =
     candles.length > 0
       ? candles[
           candles.length - 1
         ]
       : null;
-
-  /*
-  |--------------------------------------------------------------------------
-  | PRICE CHANGE
-  |--------------------------------------------------------------------------
-  */
-
   const change =
     useMemo(() => {
       if (
@@ -380,15 +337,12 @@ export default function TradingChart({
       ) {
         return 0;
       }
-
       const first =
         candles[0].close;
-
       const last =
         candles[
           candles.length - 1
         ].close;
-
       if (
         !Number.isFinite(
           first
@@ -400,20 +354,12 @@ export default function TradingChart({
       ) {
         return 0;
       }
-
       return (
         ((last - first) /
           first) *
         100
       );
     }, [candles]);
-
-  /*
-  |--------------------------------------------------------------------------
-  | CHART
-  |--------------------------------------------------------------------------
-  */
-
   const chart =
     useMemo(() => {
       if (
@@ -421,30 +367,24 @@ export default function TradingChart({
       ) {
         return null;
       }
-
       const width = 900;
       const height = 430;
-
       const left = 15;
       const right = 80;
       const top = 20;
       const bottom = 40;
-
       const volumeHeight = 65;
       const volumeGap = 15;
-
       const priceHeight =
         height -
         top -
         bottom -
         volumeHeight -
         volumeGap;
-
       const chartWidth =
         width -
         left -
         right;
-
       const rawMax =
         Math.max(
           ...candles.map(
@@ -452,7 +392,6 @@ export default function TradingChart({
               candle.high
           )
         );
-
       const rawMin =
         Math.min(
           ...candles.map(
@@ -460,40 +399,32 @@ export default function TradingChart({
               candle.low
           )
         );
-
       const rawRange =
-        rawMax -
-          rawMin || 1;
-
+        rawMax - rawMin || 1;
       const padding =
         rawRange * 0.05;
-
       const maxPrice =
         rawMax + padding;
-
       const minPrice =
         Math.max(
           0,
-          rawMin -
-            padding
+          rawMin - padding
         );
-
       const priceRange =
         maxPrice -
           minPrice || 1;
-
       const getX = (
         index: number
       ) => {
         if (
-          candles.length === 1
+          candles.length ===
+          1
         ) {
           return (
             left +
             chartWidth / 2
           );
         }
-
         return (
           left +
           (index /
@@ -502,7 +433,6 @@ export default function TradingChart({
             chartWidth
         );
       };
-
       const getY = (
         price: number
       ) => {
@@ -514,7 +444,6 @@ export default function TradingChart({
             priceHeight
         );
       };
-
       const candleWidth =
         Math.max(
           2,
@@ -525,7 +454,6 @@ export default function TradingChart({
               0.7
           )
         );
-
       const chartCandles =
         candles.map(
           (
@@ -534,47 +462,36 @@ export default function TradingChart({
           ) => {
             const x =
               getX(index);
-
             const openY =
               getY(
                 candle.open
               );
-
             const closeY =
               getY(
                 candle.close
               );
-
             const highY =
               getY(
                 candle.high
               );
-
             const lowY =
               getY(
                 candle.low
               );
-
             return {
-              time:
-                candle.time,
-
+              time: candle.time,
               x,
-
               bodyX:
                 x -
                 candleWidth /
                   2,
-
               bodyY:
                 Math.min(
                   openY,
                   closeY
                 ),
-
               bodyWidth:
                 candleWidth,
-
               bodyHeight:
                 Math.max(
                   1,
@@ -583,23 +500,17 @@ export default function TradingChart({
                       closeY
                   )
                 ),
-
               highY,
-
               lowY,
-
               bullish:
                 candle.close >=
                 candle.open,
             };
           }
         );
-
       const calculateMA = (
         length: number
-      ): (
-        number | null
-      )[] => {
+      ): (number | null)[] => {
         return candles.map(
           (_, index) => {
             if (
@@ -608,9 +519,7 @@ export default function TradingChart({
             ) {
               return null;
             }
-
             let total = 0;
-
             for (
               let i =
                 index -
@@ -620,23 +529,22 @@ export default function TradingChart({
               i++
             ) {
               total +=
-                candles[i].close;
+                candles[i]
+                  .close;
             }
-
             return (
               total / length
             );
           }
         );
       };
-
       const createPath = (
         values: (
-          number | null
+          | number
+          | null
         )[]
       ) => {
         let path = "";
-
         values.forEach(
           (
             value,
@@ -651,35 +559,25 @@ export default function TradingChart({
             ) {
               return;
             }
-
             const px =
               getX(index);
-
             const py =
               getY(value);
-
             if (!path) {
-              path =
-                `M ${px} ${py}`;
+              path = `M ${px} ${py}`;
             } else {
-              path +=
-                ` L ${px} ${py}`;
+              path += ` L ${px} ${py}`;
             }
           }
         );
-
         return path;
       };
-
       const ma7 =
         calculateMA(7);
-
       const ma25 =
         calculateMA(25);
-
       const ma99 =
         calculateMA(99);
-
       const maxVolume =
         Math.max(
           ...candles.map(
@@ -692,12 +590,10 @@ export default function TradingChart({
           ),
           1
         );
-
       const volumeTop =
         top +
         priceHeight +
         volumeGap;
-
       const volumeBars =
         candles.map(
           (
@@ -710,67 +606,53 @@ export default function TradingChart({
               )
                 ? candle.volume
                 : 0;
-
             const barHeight =
               (volume /
                 maxVolume) *
               volumeHeight;
-
             return {
-              time:
-                candle.time,
-
-              x:
-                getX(index),
-
+              time: candle.time,
+              x: getX(index),
               y:
                 volumeTop +
                 volumeHeight -
                 barHeight,
-
               width:
                 Math.max(
                   1,
                   candleWidth
                 ),
-
               height:
                 Math.max(
                   1,
                   barHeight
                 ),
-
               bullish:
                 candle.close >=
                 candle.open,
             };
           }
         );
-
       const priceLevels =
         Array.from(
           { length: 6 },
           (_, index) => {
             const ratio =
               index / 5;
-
             const price =
               maxPrice -
               ratio *
                 priceRange;
-
             const y =
               top +
               ratio *
                 priceHeight;
-
             return {
               price,
               y,
             };
           }
         );
-
       const timeIndexes =
         candles.length <= 6
           ? candles.map(
@@ -778,9 +660,7 @@ export default function TradingChart({
                 index
             )
           : Array.from(
-              {
-                length: 6,
-              },
+              { length: 6 },
               (_, index) =>
                 Math.round(
                   (index / 5) *
@@ -788,16 +668,13 @@ export default function TradingChart({
                       1)
                 )
             );
-
       const timeLabels =
         timeIndexes.map(
           (index) => ({
             time:
               candles[index]
                 .time,
-
             x: getX(index),
-
             label:
               formatTime(
                 candles[index]
@@ -806,43 +683,29 @@ export default function TradingChart({
               ),
           })
         );
-
       const currentPriceY =
         latest !== null
           ? getY(
               latest.close
             )
           : null;
-
       return {
         width,
-
         height,
-
         maxPrice: rawMax,
-
         minPrice: rawMin,
-
         candles:
           chartCandles,
-
         ma7Path:
           createPath(ma7),
-
         ma25Path:
           createPath(ma25),
-
         ma99Path:
           createPath(ma99),
-
         volumeBars,
-
         priceLevels,
-
         timeLabels,
-
         volumeTop,
-
         currentPriceY,
       };
     }, [
@@ -850,20 +713,15 @@ export default function TradingChart({
       latest,
       selectedPeriod.minutes,
     ]);
-
-  const handleRetry = () => {
-    void loadCandles(true);
-  };
-
+  const handleRetry =
+    () => {
+      void loadCandles(true);
+    };
   return (
     <div className="bg-[#101A2C] border border-slate-800 rounded-3xl p-5">
-
       <div className="flex items-start justify-between gap-3">
-
         <div>
-
           <div className="flex items-center gap-2">
-
             <span
               className={`w-2.5 h-2.5 rounded-full ${
                 liveConnected
@@ -871,21 +729,17 @@ export default function TradingChart({
                   : "bg-yellow-400"
               }`}
             />
-
             <h2 className="text-xl font-bold">
               Live Trading Chart
             </h2>
-
           </div>
-
           <p className="text-xs text-gray-500 mt-1">
             {symbol.replace(
               "USDT",
               " / USD"
             )}{" "}
-            • Binance Public Market Data
+            • Real Market Data
           </p>
-
           <p
             className={`text-[10px] mt-1 font-semibold ${
               liveConnected
@@ -897,19 +751,15 @@ export default function TradingChart({
               ? "● LIVE MARKET"
               : "● MARKET DATA OFFLINE"}
           </p>
-
         </div>
-
         {latest && (
           <div className="text-right">
-
             <p className="font-bold text-lg">
               $
               {formatPrice(
                 latest.close
               )}
             </p>
-
             <p
               className={`text-xs mt-1 ${
                 change >= 0
@@ -920,29 +770,27 @@ export default function TradingChart({
               {change >= 0
                 ? "+"
                 : ""}
-              {change.toFixed(2)}%
+              {change.toFixed(
+                2
+              )}
+              %
             </p>
-
           </div>
         )}
-
       </div>
-
       <div className="mt-5 rounded-2xl bg-[#0B1220] border border-slate-700 overflow-hidden">
-
         {loading ? (
           <div className="h-80 flex items-center justify-center text-gray-500">
             Loading real market data...
           </div>
-        ) : error ? (
+        ) : error &&
+          candles.length ===
+            0 ? (
           <div className="h-80 flex items-center justify-center p-5 text-center">
-
             <div>
-
               <p className="text-red-400 text-sm">
                 {error}
               </p>
-
               <button
                 type="button"
                 onClick={
@@ -952,9 +800,7 @@ export default function TradingChart({
               >
                 Retry
               </button>
-
             </div>
-
           </div>
         ) : !chart ? (
           <div className="h-80 flex items-center justify-center text-gray-500">
@@ -962,14 +808,12 @@ export default function TradingChart({
           </div>
         ) : (
           <div className="w-full overflow-x-auto">
-
             <svg
               viewBox={`0 0 ${chart.width} ${chart.height}`}
               className="w-full min-w-[760px] h-[380px]"
               role="img"
-              aria-label={`${symbol} real Binance candlestick chart`}
+              aria-label={`${symbol} real market candlestick chart`}
             >
-
               {chart.priceLevels.map(
                 (level) => (
                   <line
@@ -986,7 +830,6 @@ export default function TradingChart({
                   />
                 )
               )}
-
               {chart.candles.map(
                 (item) => (
                   <g
@@ -994,7 +837,6 @@ export default function TradingChart({
                       item.time
                     }
                   >
-
                     <line
                       x1={item.x}
                       x2={item.x}
@@ -1011,7 +853,6 @@ export default function TradingChart({
                       }
                       strokeWidth="1"
                     />
-
                     <rect
                       x={
                         item.bodyX
@@ -1032,11 +873,9 @@ export default function TradingChart({
                       }
                       rx="1"
                     />
-
                   </g>
                 )
               )}
-
               {chart.ma7Path && (
                 <path
                   d={
@@ -1047,7 +886,6 @@ export default function TradingChart({
                   strokeWidth="1.5"
                 />
               )}
-
               {chart.ma25Path && (
                 <path
                   d={
@@ -1058,7 +896,6 @@ export default function TradingChart({
                   strokeWidth="1.5"
                 />
               )}
-
               {chart.ma99Path && (
                 <path
                   d={
@@ -1069,7 +906,6 @@ export default function TradingChart({
                   strokeWidth="1.5"
                 />
               )}
-
               <line
                 x1={0}
                 x2={
@@ -1084,7 +920,6 @@ export default function TradingChart({
                 }
                 stroke="rgba(148,163,184,0.12)"
               />
-
               {chart.volumeBars.map(
                 (bar) => (
                   <rect
@@ -1110,7 +945,6 @@ export default function TradingChart({
                   />
                 )
               )}
-
               {chart.currentPriceY !==
                 null &&
                 latest && (
@@ -1132,7 +966,6 @@ export default function TradingChart({
                       strokeDasharray="4 4"
                       opacity="0.7"
                     />
-
                     <rect
                       x={
                         chart.width -
@@ -1147,7 +980,6 @@ export default function TradingChart({
                       rx="3"
                       fill="#0891b2"
                     />
-
                     <text
                       x={
                         chart.width -
@@ -1169,7 +1001,6 @@ export default function TradingChart({
                     </text>
                   </>
                 )}
-
               {chart.priceLevels.map(
                 (level) => (
                   <text
@@ -1179,8 +1010,7 @@ export default function TradingChart({
                       5
                     }
                     y={
-                      level.y +
-                      4
+                      level.y + 4
                     }
                     textAnchor="end"
                     fill="#94a3b8"
@@ -1192,7 +1022,6 @@ export default function TradingChart({
                   </text>
                 )
               )}
-
               <text
                 x={15}
                 y={
@@ -1204,7 +1033,6 @@ export default function TradingChart({
               >
                 VOLUME
               </text>
-
               {chart.timeLabels.map(
                 (item) => (
                   <text
@@ -1222,16 +1050,11 @@ export default function TradingChart({
                   </text>
                 )
               )}
-
             </svg>
-
           </div>
         )}
-
       </div>
-
       <div className="flex gap-2 mt-4 overflow-x-auto pb-1">
-
         {PERIODS.map(
           (item) => (
             <button
@@ -1255,17 +1078,12 @@ export default function TradingChart({
             </button>
           )
         )}
-
       </div>
-
       <div className="grid grid-cols-3 gap-3 mt-4">
-
         <div className="bg-[#0B1220] rounded-2xl p-3">
-
           <p className="text-[10px] text-gray-500">
             HIGH
           </p>
-
           <p className="text-sm font-semibold mt-1">
             $
             {chart
@@ -1274,15 +1092,11 @@ export default function TradingChart({
                 )
               : "0"}
           </p>
-
         </div>
-
         <div className="bg-[#0B1220] rounded-2xl p-3">
-
           <p className="text-[10px] text-gray-500">
             LOW
           </p>
-
           <p className="text-sm font-semibold mt-1">
             $
             {chart
@@ -1291,48 +1105,36 @@ export default function TradingChart({
                 )
               : "0"}
           </p>
-
         </div>
-
         <div className="bg-[#0B1220] rounded-2xl p-3">
-
           <p className="text-[10px] text-gray-500">
             CANDLES
           </p>
-
           <p className="text-sm font-semibold mt-1">
             {candles.length}
           </p>
-
         </div>
-
       </div>
-
       <div className="flex flex-wrap items-center justify-center gap-4 mt-4 text-[10px]">
-
         <div className="flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-full bg-yellow-400" />
           <span className="text-gray-400">
             MA7
           </span>
         </div>
-
         <div className="flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-full bg-cyan-400" />
           <span className="text-gray-400">
             MA25
           </span>
         </div>
-
         <div className="flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-full bg-purple-400" />
           <span className="text-gray-400">
             MA99
           </span>
         </div>
-
         <div className="flex items-center gap-1.5">
-
           <span
             className={`w-2 h-2 rounded-full ${
               liveConnected
@@ -1340,17 +1142,15 @@ export default function TradingChart({
                 : "bg-yellow-400"
             }`}
           />
-
           <span className="text-gray-400">
-            {liveConnected
-              ? "LIVE"
-              : "OFFLINE"}
+            {refreshing
+              ? "UPDATING"
+              : liveConnected
+                ? "LIVE"
+                : "OFFLINE"}
           </span>
-
         </div>
-
       </div>
-
     </div>
   );
 }
