@@ -1561,7 +1561,6 @@ export default function AITradePage() {
         <section className="mt-6">
           <TradingChart
             symbol="BTCUSDT"
-            category="spot"
           />
         </section>
 
@@ -1735,3 +1734,4 @@ export default function AITradePage() {
     </main>
   );
 }
+

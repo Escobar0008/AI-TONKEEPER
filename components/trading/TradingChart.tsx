@@ -4,7 +4,6 @@ import {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from "react";
 
@@ -18,693 +17,355 @@ type Candle = {
   turnover: number;
 };
 
-type KlineResponse = {
-  success: boolean;
-  message?: string;
+type MarketApiResponse = {
+  success?: boolean;
+  market?: boolean;
+  source?: string;
+  symbol?: string;
+  interval?: number;
   candles?: Candle[];
+  message?: string;
 };
 
 type TradingChartProps = {
   symbol?: string;
-  category?: "spot" | "linear" | "inverse";
 };
 
 const PERIODS = [
-  { label: "1m", interval: "1", limit: 200 },
-  { label: "5m", interval: "5", limit: 200 },
-  { label: "15m", interval: "15", limit: 200 },
-  { label: "30m", interval: "30", limit: 200 },
-  { label: "1H", interval: "60", limit: 200 },
-  { label: "4H", interval: "240", limit: 200 },
-  { label: "1D", interval: "D", limit: 200 },
+  { label: "1m", minutes: 1 },
+  { label: "5m", minutes: 5 },
+  { label: "15m", minutes: 15 },
+  { label: "30m", minutes: 30 },
+  { label: "1H", minutes: 60 },
+  { label: "4H", minutes: 240 },
+  { label: "1D", minutes: 1440 },
 ] as const;
 
-function formatPrice(value: number): string {
+function formatPrice(
+  value: number
+): string {
   if (!Number.isFinite(value)) {
     return "0";
   }
 
   if (value >= 1000) {
-    return value.toLocaleString("en-US", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
+    return value.toLocaleString(
+      "en-US",
+      {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }
+    );
   }
 
   if (value >= 1) {
-    return value.toLocaleString("en-US", {
+    return value.toLocaleString(
+      "en-US",
+      {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 4,
+      }
+    );
+  }
+
+  return value.toLocaleString(
+    "en-US",
+    {
       minimumFractionDigits: 2,
-      maximumFractionDigits: 4,
-    });
-  }
-
-  return value.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 8,
-  });
-}
-
-function getWebSocketUrl(
-  category: "spot" | "linear" | "inverse"
-): string {
-  switch (category) {
-    case "spot":
-      return "wss://stream.bybit.com/v5/public/spot";
-
-    case "inverse":
-      return "wss://stream.bybit.com/v5/public/inverse";
-
-    case "linear":
-    default:
-      return "wss://stream.bybit.com/v5/public/linear";
-  }
+      maximumFractionDigits: 8,
+    }
+  );
 }
 
 function formatTime(
   timestamp: number,
-  interval: string
+  intervalMinutes: number
 ): string {
-  const date = new Date(timestamp);
+  const date =
+    new Date(timestamp);
 
-  if (interval === "D") {
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-    });
+  if (
+    intervalMinutes >= 1440
+  ) {
+    return date.toLocaleDateString(
+      "en-US",
+      {
+        month: "short",
+        day: "numeric",
+      }
+    );
   }
 
-  return date.toLocaleTimeString("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
+  return date.toLocaleTimeString(
+    "en-US",
+    {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }
+  );
 }
+
+/*
+|--------------------------------------------------------------------------
+| COMPONENT
+|--------------------------------------------------------------------------
+*/
 
 export default function TradingChart({
   symbol = "BTCUSDT",
-  category = "spot",
 }: TradingChartProps) {
-  const [period, setPeriod] = useState("15m");
+  const [period, setPeriod] =
+    useState("15m");
 
-  const [candles, setCandles] = useState<Candle[]>([]);
+  const [candles, setCandles] =
+    useState<Candle[]>([]);
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] =
+    useState(true);
 
-  const [error, setError] = useState("");
+  const [error, setError] =
+    useState("");
 
   const [liveConnected, setLiveConnected] =
     useState(false);
 
-  const socketRef = useRef<WebSocket | null>(null);
-
-  const reconnectTimerRef =
-    useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const heartbeatTimerRef =
-    useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const mountedRef = useRef(false);
-
-  const reconnectAttemptsRef = useRef(0);
-
-  const selectedPeriod = useMemo(() => {
-    return (
-      PERIODS.find(
-        (item) => item.label === period
-      ) ?? PERIODS[2]
-    );
-  }, [period]);
-
   /*
   |--------------------------------------------------------------------------
-  | LOAD HISTORICAL CANDLES
+  | SELECTED PERIOD
   |--------------------------------------------------------------------------
   */
 
-  const loadCandles = useCallback(
-    async (showLoading = true) => {
-      try {
-        if (showLoading) {
-          setLoading(true);
-        }
+  const selectedPeriod =
+    useMemo(() => {
+      return (
+        PERIODS.find(
+          (item) =>
+            item.label ===
+            period
+        ) ??
+        PERIODS[2]
+      );
+    }, [period]);
 
-        setError("");
+  /*
+  |--------------------------------------------------------------------------
+  | LOAD MARKET DATA
+  |--------------------------------------------------------------------------
+  |
+  | IMPORTANT:
+  |
+  | The browser calls ONLY AI TONKEEPER.
+  |
+  | AI TONKEEPER server calls CoinGecko.
+  |
+  |--------------------------------------------------------------------------
+  */
 
-        const params = new URLSearchParams({
-          symbol,
-          category,
-          interval: selectedPeriod.interval,
-          limit: String(selectedPeriod.limit),
-        });
-
-        const response = await fetch(
-          `/api/bybit/market/kline?${params.toString()}`,
-          {
-            method: "GET",
-            cache: "no-store",
-          }
-        );
-
-        let data: KlineResponse;
-
+  const loadCandles =
+    useCallback(
+      async (
+        showLoading = true
+      ) => {
         try {
-          data =
-            (await response.json()) as KlineResponse;
-        } catch {
-          throw new Error(
-            "Invalid response from market API."
-          );
-        }
+          if (showLoading) {
+            setLoading(true);
+          }
 
-        if (!response.ok || !data.success) {
-          throw new Error(
-            data.message ||
-              "Unable to load chart data."
-          );
-        }
+          setError("");
 
-        const nextCandles = Array.isArray(
-          data.candles
-        )
-          ? data.candles
-              .filter((candle) => {
-                return (
-                  Number.isFinite(candle.time) &&
-                  Number.isFinite(candle.open) &&
-                  Number.isFinite(candle.high) &&
-                  Number.isFinite(candle.low) &&
-                  Number.isFinite(candle.close)
-                );
-              })
-              .sort(
-                (a, b) => a.time - b.time
-              )
-          : [];
+          const url =
+            `/api/ai-trade?market=true` +
+            `&symbol=${encodeURIComponent(
+              symbol
+            )}` +
+            `&interval=${selectedPeriod.minutes}` +
+            `&limit=200` +
+            `&category=spot`;
 
-        if (mountedRef.current) {
-          setCandles(
-            nextCandles.slice(
-              -selectedPeriod.limit
+          const response =
+            await fetch(url, {
+              method: "GET",
+              cache: "no-store",
+              headers: {
+                Accept:
+                  "application/json",
+              },
+            });
+
+          let data: MarketApiResponse;
+
+          try {
+            data =
+              (await response.json()) as MarketApiResponse;
+          } catch {
+            throw new Error(
+              "AI TONKEEPER returned an invalid market response."
+            );
+          }
+
+          if (!response.ok) {
+            throw new Error(
+              data?.message ??
+                `Market API error (${response.status}).`
+            );
+          }
+
+          if (
+            data?.success !==
+            true
+          ) {
+            throw new Error(
+              data?.message ??
+                "AI TONKEEPER could not load real market data."
+            );
+          }
+
+          const nextCandles =
+            Array.isArray(
+              data?.candles
             )
-          );
-        }
-      } catch (err) {
-        console.error(
-          "TRADING CHART ERROR:",
-          err
-        );
+              ? data.candles
+              : [];
 
-        if (mountedRef.current) {
+          if (
+            nextCandles.length === 0
+          ) {
+            throw new Error(
+              "No real market data available from AI TONKEEPER."
+            );
+          }
+
+          /*
+          |--------------------------------------------------------------------------
+          | NORMALIZE CANDLES
+          |--------------------------------------------------------------------------
+          */
+
+          const normalized =
+            nextCandles
+              .map(
+                (candle) => ({
+                  time: Number(
+                    candle.time
+                  ),
+
+                  open: Number(
+                    candle.open
+                  ),
+
+                  high: Number(
+                    candle.high
+                  ),
+
+                  low: Number(
+                    candle.low
+                  ),
+
+                  close: Number(
+                    candle.close
+                  ),
+
+                  volume: Number(
+                    candle.volume ??
+                      0
+                  ),
+
+                  turnover: Number(
+                    candle.turnover ??
+                      0
+                  ),
+                })
+              )
+              .filter(
+                (candle) =>
+                  Number.isFinite(
+                    candle.time
+                  ) &&
+                  Number.isFinite(
+                    candle.open
+                  ) &&
+                  Number.isFinite(
+                    candle.high
+                  ) &&
+                  Number.isFinite(
+                    candle.low
+                  ) &&
+                  Number.isFinite(
+                    candle.close
+                  ) &&
+                  candle.close >
+                    0
+              )
+              .sort(
+                (a, b) =>
+                  a.time - b.time
+              )
+              .slice(-200);
+
+          if (
+            normalized.length ===
+            0
+          ) {
+            throw new Error(
+              "No valid real market candles received from AI TONKEEPER."
+            );
+          }
+
+          setCandles(
+            normalized
+          );
+
+          setLiveConnected(
+            true
+          );
+        } catch (err) {
+          console.error(
+            "AI TONKEEPER TRADING CHART ERROR:",
+            err
+          );
+
+          setLiveConnected(
+            false
+          );
+
           setError(
             err instanceof Error
               ? err.message
-              : "Unable to load market data."
+              : "Unable to load real market data."
           );
-        }
-      } finally {
-        if (mountedRef.current) {
+        } finally {
           setLoading(false);
         }
-      }
-    },
-    [
-      symbol,
-      category,
-      selectedPeriod.interval,
-      selectedPeriod.limit,
-    ]
-  );
+      },
+      [
+        symbol,
+        selectedPeriod.minutes,
+      ]
+    );
 
   /*
   |--------------------------------------------------------------------------
-  | INITIAL LOAD
+  | INITIAL LOAD + REFRESH
   |--------------------------------------------------------------------------
   */
 
   useEffect(() => {
-    mountedRef.current = true;
-
     void loadCandles(true);
 
+    const interval =
+      setInterval(() => {
+        void loadCandles(
+          false
+        );
+      }, 30000);
+
     return () => {
-      mountedRef.current = false;
+      clearInterval(
+        interval
+      );
     };
   }, [loadCandles]);
-
-  /*
-  |--------------------------------------------------------------------------
-  | WEBSOCKET
-  |--------------------------------------------------------------------------
-  */
-
-  useEffect(() => {
-    mountedRef.current = true;
-
-    const websocketUrl =
-      getWebSocketUrl(category);
-
-    const topic = `kline.${selectedPeriod.interval}.${symbol}`;
-
-    let stopped = false;
-
-    const clearTimers = () => {
-      if (
-        reconnectTimerRef.current !== null
-      ) {
-        clearTimeout(
-          reconnectTimerRef.current
-        );
-
-        reconnectTimerRef.current = null;
-      }
-
-      if (
-        heartbeatTimerRef.current !== null
-      ) {
-        clearInterval(
-          heartbeatTimerRef.current
-        );
-
-        heartbeatTimerRef.current = null;
-      }
-    };
-
-    const closeSocket = () => {
-      const socket = socketRef.current;
-
-      socketRef.current = null;
-
-      if (!socket) {
-        return;
-      }
-
-      socket.onopen = null;
-      socket.onmessage = null;
-      socket.onerror = null;
-      socket.onclose = null;
-
-      if (
-        socket.readyState ===
-          WebSocket.OPEN ||
-        socket.readyState ===
-          WebSocket.CONNECTING
-      ) {
-        try {
-          socket.close();
-        } catch {
-          // Ignore close errors.
-        }
-      }
-    };
-
-    const cleanup = () => {
-      clearTimers();
-      closeSocket();
-
-      if (mountedRef.current) {
-        setLiveConnected(false);
-      }
-    };
-
-    const scheduleReconnect = () => {
-      if (stopped) {
-        return;
-      }
-
-      if (!mountedRef.current) {
-        return;
-      }
-
-      if (
-        reconnectTimerRef.current !== null
-      ) {
-        return;
-      }
-
-      reconnectAttemptsRef.current += 1;
-
-      const delay = Math.min(
-        1000 *
-          Math.pow(
-            2,
-            reconnectAttemptsRef.current - 1
-          ),
-        10000
-      );
-
-      console.log(
-        `BYBIT: reconnecting in ${delay}ms`
-      );
-
-      reconnectTimerRef.current =
-        setTimeout(() => {
-          reconnectTimerRef.current = null;
-
-          if (!stopped) {
-            connect();
-          }
-        }, delay);
-    };
-
-    const connect = () => {
-      if (stopped) {
-        return;
-      }
-
-      if (!mountedRef.current) {
-        return;
-      }
-
-      clearTimers();
-
-      closeSocket();
-
-      try {
-        console.log(
-          "BYBIT WEBSOCKET CONNECT:",
-          websocketUrl
-        );
-
-        const socket =
-          new WebSocket(websocketUrl);
-
-        socketRef.current = socket;
-
-        socket.onopen = () => {
-          if (
-            stopped ||
-            !mountedRef.current
-          ) {
-            return;
-          }
-
-          console.log(
-            "BYBIT WEBSOCKET CONNECTED"
-          );
-
-          reconnectAttemptsRef.current = 0;
-
-          setLiveConnected(true);
-
-          /*
-          | Subscribe
-          */
-
-          socket.send(
-            JSON.stringify({
-              op: "subscribe",
-              args: [topic],
-            })
-          );
-
-          console.log(
-            "BYBIT SUBSCRIBED:",
-            topic
-          );
-
-          /*
-          | Heartbeat
-          */
-
-          if (
-            heartbeatTimerRef.current !==
-            null
-          ) {
-            clearInterval(
-              heartbeatTimerRef.current
-            );
-          }
-
-          heartbeatTimerRef.current =
-            setInterval(() => {
-              if (
-                socket.readyState ===
-                WebSocket.OPEN
-              ) {
-                socket.send(
-                  JSON.stringify({
-                    op: "ping",
-                  })
-                );
-              }
-            }, 20000);
-        };
-
-        socket.onmessage = (event) => {
-          if (
-            stopped ||
-            !mountedRef.current
-          ) {
-            return;
-          }
-
-          try {
-            const message =
-              JSON.parse(event.data) as {
-                topic?: string;
-                type?: string;
-                success?: boolean;
-                ret_msg?: string;
-                data?: Array<{
-                  start?: number | string;
-                  timestamp?: number | string;
-                  open?: number | string;
-                  high?: number | string;
-                  low?: number | string;
-                  close?: number | string;
-                  volume?: number | string;
-                  turnover?: number | string;
-                }>;
-              };
-
-            /*
-            | Ignore pong / subscription messages
-            */
-
-            if (
-              message.topic !== topic
-            ) {
-              return;
-            }
-
-            if (
-              !Array.isArray(
-                message.data
-              ) ||
-              message.data.length === 0
-            ) {
-              return;
-            }
-
-            const incoming =
-              message.data[0];
-
-            const time = Number(
-              incoming.start ??
-                incoming.timestamp ??
-                0
-            );
-
-            const open = Number(
-              incoming.open ?? 0
-            );
-
-            const high = Number(
-              incoming.high ?? 0
-            );
-
-            const low = Number(
-              incoming.low ?? 0
-            );
-
-            const close = Number(
-              incoming.close ?? 0
-            );
-
-            const volume = Number(
-              incoming.volume ?? 0
-            );
-
-            const turnover = Number(
-              incoming.turnover ?? 0
-            );
-
-            if (
-              !Number.isFinite(time) ||
-              !Number.isFinite(open) ||
-              !Number.isFinite(high) ||
-              !Number.isFinite(low) ||
-              !Number.isFinite(close)
-            ) {
-              return;
-            }
-
-            const liveCandle: Candle = {
-              time,
-              open,
-              high,
-              low,
-              close,
-              volume:
-                Number.isFinite(volume)
-                  ? volume
-                  : 0,
-              turnover:
-                Number.isFinite(turnover)
-                  ? turnover
-                  : 0,
-            };
-
-            setCandles((previous) => {
-              if (
-                previous.length === 0
-              ) {
-                return [
-                  liveCandle,
-                ];
-              }
-
-              const last =
-                previous[
-                  previous.length - 1
-                ];
-
-              /*
-              | Update current candle
-              */
-
-              if (
-                last.time ===
-                liveCandle.time
-              ) {
-                return [
-                  ...previous.slice(
-                    0,
-                    -1
-                  ),
-                  liveCandle,
-                ];
-              }
-
-              /*
-              | New candle
-              */
-
-              if (
-                liveCandle.time >
-                last.time
-              ) {
-                return [
-                  ...previous,
-                  liveCandle,
-                ].slice(
-                  -selectedPeriod.limit
-                );
-              }
-
-              return previous;
-            });
-          } catch (err) {
-            console.error(
-              "BYBIT WEBSOCKET MESSAGE ERROR:",
-              err
-            );
-          }
-        };
-
-        socket.onerror = (event) => {
-          console.error(
-            "BYBIT WEBSOCKET ERROR:",
-            event
-          );
-
-          if (
-            mountedRef.current &&
-            !stopped
-          ) {
-            setLiveConnected(false);
-          }
-        };
-
-        socket.onclose = (
-          event
-        ) => {
-          console.warn(
-            "BYBIT WEBSOCKET CLOSED:",
-            event.code,
-            event.reason
-          );
-
-          if (
-            socketRef.current ===
-            socket
-          ) {
-            socketRef.current = null;
-          }
-
-          if (
-            heartbeatTimerRef.current !==
-            null
-          ) {
-            clearInterval(
-              heartbeatTimerRef.current
-            );
-
-            heartbeatTimerRef.current =
-              null;
-          }
-
-          if (
-            mountedRef.current &&
-            !stopped
-          ) {
-            setLiveConnected(false);
-
-            scheduleReconnect();
-          }
-        };
-      } catch (err) {
-        console.error(
-          "BYBIT WEBSOCKET CONNECTION ERROR:",
-          err
-        );
-
-        if (
-          mountedRef.current &&
-          !stopped
-        ) {
-          setLiveConnected(false);
-
-          scheduleReconnect();
-        }
-      }
-    };
-
-    /*
-    | Start connection
-    */
-
-    connect();
-
-    /*
-    | Cleanup when symbol/category/timeframe changes
-    */
-
-    return () => {
-      stopped = true;
-
-      clearTimers();
-
-      closeSocket();
-
-      setLiveConnected(false);
-    };
-  }, [
-    symbol,
-    category,
-    selectedPeriod.interval,
-    selectedPeriod.limit,
-  ]);
 
   /*
   |--------------------------------------------------------------------------
@@ -714,40 +375,51 @@ export default function TradingChart({
 
   const latest =
     candles.length > 0
-      ? candles[candles.length - 1]
+      ? candles[
+          candles.length - 1
+        ]
       : null;
 
   /*
   |--------------------------------------------------------------------------
-  | PERFORMANCE
+  | PRICE CHANGE
   |--------------------------------------------------------------------------
   */
 
-  const change = useMemo(() => {
-    if (candles.length < 2) {
-      return 0;
-    }
+  const change =
+    useMemo(() => {
+      if (
+        candles.length < 2
+      ) {
+        return 0;
+      }
 
-    const first =
-      candles[0].close;
+      const first =
+        candles[0].close;
 
-    const last =
-      candles[candles.length - 1]
-        .close;
+      const last =
+        candles[
+          candles.length - 1
+        ].close;
 
-    if (
-      !Number.isFinite(first) ||
-      !Number.isFinite(last) ||
-      first === 0
-    ) {
-      return 0;
-    }
+      if (
+        !Number.isFinite(
+          first
+        ) ||
+        !Number.isFinite(
+          last
+        ) ||
+        first === 0
+      ) {
+        return 0;
+      }
 
-    return (
-      ((last - first) / first) *
-      100
-    );
-  }, [candles]);
+      return (
+        ((last - first) /
+          first) *
+        100
+      );
+    }, [candles]);
 
   /*
   |--------------------------------------------------------------------------
@@ -755,367 +427,482 @@ export default function TradingChart({
   |--------------------------------------------------------------------------
   */
 
-  const chart = useMemo(() => {
-    if (candles.length === 0) {
-      return null;
-    }
-
-    const width = 900;
-    const height = 430;
-
-    const left = 15;
-    const right = 80;
-    const top = 20;
-    const bottom = 40;
-
-    const volumeHeight = 65;
-    const volumeGap = 15;
-
-    const priceHeight =
-      height -
-      top -
-      bottom -
-      volumeHeight -
-      volumeGap;
-
-    const chartWidth =
-      width - left - right;
-
-    const highs = candles.map(
-      (candle) => candle.high
-    );
-
-    const lows = candles.map(
-      (candle) => candle.low
-    );
-
-    const rawMax = Math.max(
-      ...highs
-    );
-
-    const rawMin = Math.min(
-      ...lows
-    );
-
-    const rawRange =
-      rawMax - rawMin || 1;
-
-    const padding =
-      rawRange * 0.05;
-
-    const maxPrice =
-      rawMax + padding;
-
-    const minPrice = Math.max(
-      0,
-      rawMin - padding
-    );
-
-    const priceRange =
-      maxPrice - minPrice || 1;
-
-    const getX = (
-      index: number
-    ) => {
-      if (candles.length === 1) {
-        return (
-          left +
-          chartWidth / 2
-        );
+  const chart =
+    useMemo(() => {
+      if (
+        candles.length === 0
+      ) {
+        return null;
       }
 
-      return (
-        left +
-        (index /
-          (candles.length - 1)) *
-          chartWidth
-      );
-    };
+      const width = 900;
+      const height = 430;
 
-    const getY = (
-      price: number
-    ) => {
-      return (
-        top +
-        ((maxPrice - price) /
-          priceRange) *
-          priceHeight
-      );
-    };
+      const left = 15;
+      const right = 80;
+      const top = 20;
+      const bottom = 40;
 
-    const candleWidth =
-      Math.max(
-        2,
-        Math.min(
-          10,
-          (chartWidth /
-            candles.length) *
-            0.7
-        )
-      );
+      const volumeHeight = 65;
+      const volumeGap = 15;
 
-    const chartCandles =
-      candles.map(
-        (candle, index) => {
-          const x = getX(index);
+      const priceHeight =
+        height -
+        top -
+        bottom -
+        volumeHeight -
+        volumeGap;
 
-          const openY =
-            getY(candle.open);
+      const chartWidth =
+        width -
+        left -
+        right;
 
-          const closeY =
-            getY(candle.close);
-
-          const highY =
-            getY(candle.high);
-
-          const lowY =
-            getY(candle.low);
-
-          return {
-            time: candle.time,
-            x,
-            bodyX:
-              x -
-              candleWidth / 2,
-            bodyY: Math.min(
-              openY,
-              closeY
-            ),
-            bodyWidth:
-              candleWidth,
-            bodyHeight:
-              Math.max(
-                1,
-                Math.abs(
-                  openY -
-                    closeY
-                )
-              ),
-            highY,
-            lowY,
-            bullish:
-              candle.close >=
-              candle.open,
-          };
-        }
-      );
-
-    const calculateMA = (
-      length: number
-    ): (number | null)[] => {
-      return candles.map(
-        (_, index) => {
-          if (
-            index <
-            length - 1
-          ) {
-            return null;
-          }
-
-          let total = 0;
-
-          for (
-            let i =
-              index -
-              length +
-              1;
-            i <= index;
-            i++
-          ) {
-            total +=
-              candles[i].close;
-          }
-
-          return (
-            total / length
-          );
-        }
-      );
-    };
-
-    const createPath = (
-      values: (number | null)[]
-    ) => {
-      let path = "";
-
-      values.forEach(
-        (value, index) => {
-          if (
-            value === null ||
-            !Number.isFinite(value)
-          ) {
-            return;
-          }
-
-          const px =
-            getX(index);
-
-          const py =
-            getY(value);
-
-          if (!path) {
-            path = `M ${px} ${py}`;
-          } else {
-            path += ` L ${px} ${py}`;
-          }
-        }
-      );
-
-      return path;
-    };
-
-    const ma7 =
-      calculateMA(7);
-
-    const ma25 =
-      calculateMA(25);
-
-    const ma99 =
-      calculateMA(99);
-
-    const maxVolume =
-      Math.max(
-        ...candles.map(
-          (candle) =>
-            Number.isFinite(
-              candle.volume
-            )
-              ? candle.volume
-              : 0
-        ),
-        1
-      );
-
-    const volumeTop =
-      top +
-      priceHeight +
-      volumeGap;
-
-    const volumeBars =
-      candles.map(
-        (candle, index) => {
-          const volume =
-            Number.isFinite(
-              candle.volume
-            )
-              ? candle.volume
-              : 0;
-
-          const barHeight =
-            (volume /
-              maxVolume) *
-            volumeHeight;
-
-          return {
-            time: candle.time,
-            x: getX(index),
-            y:
-              volumeTop +
-              volumeHeight -
-              barHeight,
-            width:
-              Math.max(
-                1,
-                candleWidth
-              ),
-            height:
-              Math.max(
-                1,
-                barHeight
-              ),
-            bullish:
-              candle.close >=
-              candle.open,
-          };
-        }
-      );
-
-    const priceLevels =
-      Array.from(
-        { length: 6 },
-        (_, index) => {
-          const ratio =
-            index / 5;
-
-          const price =
-            maxPrice -
-            ratio *
-              priceRange;
-
-          const y =
-            top +
-            ratio *
-              priceHeight;
-
-          return {
-            price,
-            y,
-          };
-        }
-      );
-
-    const timeIndexes =
-      candles.length <= 6
-        ? candles.map(
-            (_, index) =>
-              index
+      const rawMax =
+        Math.max(
+          ...candles.map(
+            (candle) =>
+              candle.high
           )
-        : Array.from(
-            { length: 6 },
-            (_, index) =>
-              Math.round(
-                (index / 5) *
-                  (candles.length -
-                    1)
-              )
+        );
+
+      const rawMin =
+        Math.min(
+          ...candles.map(
+            (candle) =>
+              candle.low
+          )
+        );
+
+      const rawRange =
+        rawMax -
+          rawMin || 1;
+
+      const padding =
+        rawRange * 0.05;
+
+      const maxPrice =
+        rawMax + padding;
+
+      const minPrice =
+        Math.max(
+          0,
+          rawMin -
+            padding
+        );
+
+      const priceRange =
+        maxPrice -
+          minPrice || 1;
+
+      const getX = (
+        index: number
+      ) => {
+        if (
+          candles.length === 1
+        ) {
+          return (
+            left +
+            chartWidth / 2
           );
+        }
 
-    const timeLabels =
-      timeIndexes.map(
-        (index) => ({
-          time:
-            candles[index].time,
-          x: getX(index),
-          label: formatTime(
-            candles[index].time,
-            selectedPeriod.interval
+        return (
+          left +
+          (index /
+            (candles.length -
+              1)) *
+            chartWidth
+        );
+      };
+
+      const getY = (
+        price: number
+      ) => {
+        return (
+          top +
+          ((maxPrice -
+            price) /
+            priceRange) *
+            priceHeight
+        );
+      };
+
+      const candleWidth =
+        Math.max(
+          2,
+          Math.min(
+            10,
+            (chartWidth /
+              candles.length) *
+              0.7
+          )
+        );
+
+      const chartCandles =
+        candles.map(
+          (
+            candle,
+            index
+          ) => {
+            const x =
+              getX(index);
+
+            const openY =
+              getY(
+                candle.open
+              );
+
+            const closeY =
+              getY(
+                candle.close
+              );
+
+            const highY =
+              getY(
+                candle.high
+              );
+
+            const lowY =
+              getY(
+                candle.low
+              );
+
+            return {
+              time:
+                candle.time,
+
+              x,
+
+              bodyX:
+                x -
+                candleWidth /
+                  2,
+
+              bodyY:
+                Math.min(
+                  openY,
+                  closeY
+                ),
+
+              bodyWidth:
+                candleWidth,
+
+              bodyHeight:
+                Math.max(
+                  1,
+                  Math.abs(
+                    openY -
+                      closeY
+                  )
+                ),
+
+              highY,
+
+              lowY,
+
+              bullish:
+                candle.close >=
+                candle.open,
+            };
+          }
+        );
+
+      /*
+      |--------------------------------------------------------------------------
+      | MOVING AVERAGES
+      |--------------------------------------------------------------------------
+      */
+
+      const calculateMA = (
+        length: number
+      ): (
+        number | null
+      )[] => {
+        return candles.map(
+          (_, index) => {
+            if (
+              index <
+              length - 1
+            ) {
+              return null;
+            }
+
+            let total = 0;
+
+            for (
+              let i =
+                index -
+                length +
+                1;
+              i <= index;
+              i++
+            ) {
+              total +=
+                candles[i].close;
+            }
+
+            return (
+              total / length
+            );
+          }
+        );
+      };
+
+      const createPath = (
+        values: (
+          number | null
+        )[]
+      ) => {
+        let path = "";
+
+        values.forEach(
+          (
+            value,
+            index
+          ) => {
+            if (
+              value ===
+                null ||
+              !Number.isFinite(
+                value
+              )
+            ) {
+              return;
+            }
+
+            const px =
+              getX(index);
+
+            const py =
+              getY(value);
+
+            if (!path) {
+              path =
+                `M ${px} ${py}`;
+            } else {
+              path +=
+                ` L ${px} ${py}`;
+            }
+          }
+        );
+
+        return path;
+      };
+
+      const ma7 =
+        calculateMA(7);
+
+      const ma25 =
+        calculateMA(25);
+
+      const ma99 =
+        calculateMA(99);
+
+      /*
+      |--------------------------------------------------------------------------
+      | VOLUME
+      |--------------------------------------------------------------------------
+      */
+
+      const maxVolume =
+        Math.max(
+          ...candles.map(
+            (candle) =>
+              Number.isFinite(
+                candle.volume
+              )
+                ? candle.volume
+                : 0
           ),
-        })
-      );
+          1
+        );
 
-    const currentPriceY =
-      latest !== null
-        ? getY(latest.close)
-        : null;
+      const volumeTop =
+        top +
+        priceHeight +
+        volumeGap;
 
-    return {
-      width,
-      height,
-      maxPrice: rawMax,
-      minPrice: rawMin,
-      candles:
-        chartCandles,
-      ma7Path:
-        createPath(ma7),
-      ma25Path:
-        createPath(ma25),
-      ma99Path:
-        createPath(ma99),
-      volumeBars,
-      priceLevels,
-      timeLabels,
-      volumeTop,
-      currentPriceY,
-    };
-  }, [
-    candles,
-    latest,
-    selectedPeriod.interval,
-  ]);
+      const volumeBars =
+        candles.map(
+          (
+            candle,
+            index
+          ) => {
+            const volume =
+              Number.isFinite(
+                candle.volume
+              )
+                ? candle.volume
+                : 0;
+
+            const barHeight =
+              (volume /
+                maxVolume) *
+              volumeHeight;
+
+            return {
+              time:
+                candle.time,
+
+              x:
+                getX(index),
+
+              y:
+                volumeTop +
+                volumeHeight -
+                barHeight,
+
+              width:
+                Math.max(
+                  1,
+                  candleWidth
+                ),
+
+              height:
+                Math.max(
+                  1,
+                  barHeight
+                ),
+
+              bullish:
+                candle.close >=
+                candle.open,
+            };
+          }
+        );
+
+      /*
+      |--------------------------------------------------------------------------
+      | PRICE LEVELS
+      |--------------------------------------------------------------------------
+      */
+
+      const priceLevels =
+        Array.from(
+          { length: 6 },
+          (_, index) => {
+            const ratio =
+              index / 5;
+
+            const price =
+              maxPrice -
+              ratio *
+                priceRange;
+
+            const y =
+              top +
+              ratio *
+                priceHeight;
+
+            return {
+              price,
+              y,
+            };
+          }
+        );
+
+      /*
+      |--------------------------------------------------------------------------
+      | TIME LABELS
+      |--------------------------------------------------------------------------
+      */
+
+      const timeIndexes =
+        candles.length <= 6
+          ? candles.map(
+              (_, index) =>
+                index
+            )
+          : Array.from(
+              {
+                length: 6,
+              },
+              (_, index) =>
+                Math.round(
+                  (index / 5) *
+                    (candles.length -
+                      1)
+                )
+            );
+
+      const timeLabels =
+        timeIndexes.map(
+          (index) => ({
+            time:
+              candles[index]
+                .time,
+
+            x: getX(index),
+
+            label:
+              formatTime(
+                candles[index]
+                  .time,
+                selectedPeriod.minutes
+              ),
+          })
+        );
+
+      const currentPriceY =
+        latest !== null
+          ? getY(
+              latest.close
+            )
+          : null;
+
+      return {
+        width,
+
+        height,
+
+        maxPrice: rawMax,
+
+        minPrice: rawMin,
+
+        candles:
+          chartCandles,
+
+        ma7Path:
+          createPath(ma7),
+
+        ma25Path:
+          createPath(ma25),
+
+        ma99Path:
+          createPath(ma99),
+
+        volumeBars,
+
+        priceLevels,
+
+        timeLabels,
+
+        volumeTop,
+
+        currentPriceY,
+      };
+    }, [
+      candles,
+      latest,
+      selectedPeriod.minutes,
+    ]);
+
+  /*
+  |--------------------------------------------------------------------------
+  | RETRY
+  |--------------------------------------------------------------------------
+  */
 
   const handleRetry = () => {
     void loadCandles(true);
   };
+
+  /*
+  |--------------------------------------------------------------------------
+  | UI
+  |--------------------------------------------------------------------------
+  */
 
   return (
     <div className="bg-[#101A2C] border border-slate-800 rounded-3xl p-5">
@@ -1143,7 +930,11 @@ export default function TradingChart({
           </div>
 
           <p className="text-xs text-gray-500 mt-1">
-            {symbol} • Bybit
+            {symbol.replace(
+              "USDT",
+              " / USD"
+            )}{" "}
+            • CoinGecko
           </p>
 
           <p
@@ -1155,7 +946,7 @@ export default function TradingChart({
           >
             {liveConnected
               ? "● LIVE MARKET"
-              : "● RECONNECTING..."}
+              : "● MARKET DATA OFFLINE"}
           </p>
 
         </div>
@@ -1194,7 +985,7 @@ export default function TradingChart({
 
         {loading ? (
           <div className="h-80 flex items-center justify-center text-gray-500">
-            Loading live market...
+            Loading real market data...
           </div>
         ) : error ? (
           <div className="h-80 flex items-center justify-center p-5 text-center">
@@ -1207,7 +998,9 @@ export default function TradingChart({
 
               <button
                 type="button"
-                onClick={handleRetry}
+                onClick={
+                  handleRetry
+                }
                 className="mt-4 px-4 py-2 rounded-xl bg-cyan-500 text-white font-semibold"
               >
                 Retry
@@ -1218,7 +1011,7 @@ export default function TradingChart({
           </div>
         ) : !chart ? (
           <div className="h-80 flex items-center justify-center text-gray-500">
-            No market data available.
+            No real market data available.
           </div>
         ) : (
           <div className="w-full overflow-x-auto">
@@ -1227,7 +1020,7 @@ export default function TradingChart({
               viewBox={`0 0 ${chart.width} ${chart.height}`}
               className="w-full min-w-[760px] h-[380px]"
               role="img"
-              aria-label={`${symbol} live Bybit candlestick chart`}
+              aria-label={`${symbol} real CoinGecko candlestick chart`}
             >
 
               {/* GRID */}
@@ -1254,14 +1047,20 @@ export default function TradingChart({
               {chart.candles.map(
                 (item) => (
                   <g
-                    key={item.time}
+                    key={
+                      item.time
+                    }
                   >
 
                     <line
                       x1={item.x}
                       x2={item.x}
-                      y1={item.highY}
-                      y2={item.lowY}
+                      y1={
+                        item.highY
+                      }
+                      y2={
+                        item.lowY
+                      }
                       stroke={
                         item.bullish
                           ? "#22c55e"
@@ -1271,8 +1070,12 @@ export default function TradingChart({
                     />
 
                     <rect
-                      x={item.bodyX}
-                      y={item.bodyY}
+                      x={
+                        item.bodyX
+                      }
+                      y={
+                        item.bodyY
+                      }
                       width={
                         item.bodyWidth
                       }
@@ -1295,7 +1098,9 @@ export default function TradingChart({
 
               {chart.ma7Path && (
                 <path
-                  d={chart.ma7Path}
+                  d={
+                    chart.ma7Path
+                  }
                   fill="none"
                   stroke="#facc15"
                   strokeWidth="1.5"
@@ -1306,7 +1111,9 @@ export default function TradingChart({
 
               {chart.ma25Path && (
                 <path
-                  d={chart.ma25Path}
+                  d={
+                    chart.ma25Path
+                  }
                   fill="none"
                   stroke="#22d3ee"
                   strokeWidth="1.5"
@@ -1317,7 +1124,9 @@ export default function TradingChart({
 
               {chart.ma99Path && (
                 <path
-                  d={chart.ma99Path}
+                  d={
+                    chart.ma99Path
+                  }
                   fill="none"
                   stroke="#a78bfa"
                   strokeWidth="1.5"
@@ -1347,7 +1156,8 @@ export default function TradingChart({
                     key={`volume-${bar.time}`}
                     x={
                       bar.x -
-                      bar.width / 2
+                      bar.width /
+                        2
                     }
                     y={bar.y}
                     width={
@@ -1500,19 +1310,20 @@ export default function TradingChart({
         {PERIODS.map(
           (item) => (
             <button
-              key={item.label}
+              key={
+                item.label
+              }
               type="button"
               onClick={() =>
                 setPeriod(
                   item.label
                 )
               }
-              disabled={loading}
               className={
                 period ===
                 item.label
-                  ? "min-w-[58px] bg-cyan-500 rounded-xl py-2.5 px-3 font-semibold text-white disabled:opacity-50"
-                  : "min-w-[58px] bg-[#0B1220] border border-slate-700 rounded-xl py-2.5 px-3 text-gray-300 disabled:opacity-50"
+                  ? "min-w-[58px] bg-cyan-500 rounded-xl py-2.5 px-3 font-semibold text-white"
+                  : "min-w-[58px] bg-[#0B1220] border border-slate-700 rounded-xl py-2.5 px-3 text-gray-300"
               }
             >
               {item.label}
@@ -1579,24 +1390,33 @@ export default function TradingChart({
       <div className="flex flex-wrap items-center justify-center gap-4 mt-4 text-[10px]">
 
         <div className="flex items-center gap-1.5">
+
           <span className="w-2 h-2 rounded-full bg-yellow-400" />
+
           <span className="text-gray-400">
             MA7
           </span>
+
         </div>
 
         <div className="flex items-center gap-1.5">
+
           <span className="w-2 h-2 rounded-full bg-cyan-400" />
+
           <span className="text-gray-400">
             MA25
           </span>
+
         </div>
 
         <div className="flex items-center gap-1.5">
+
           <span className="w-2 h-2 rounded-full bg-purple-400" />
+
           <span className="text-gray-400">
             MA99
           </span>
+
         </div>
 
         <div className="flex items-center gap-1.5">
@@ -1612,7 +1432,7 @@ export default function TradingChart({
           <span className="text-gray-400">
             {liveConnected
               ? "LIVE"
-              : "RECONNECTING"}
+              : "OFFLINE"}
           </span>
 
         </div>
