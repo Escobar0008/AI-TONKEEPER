@@ -1,8 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import type {
-  AITradeSide,
-  Coin,
-} from "@prisma/client";
+import type { AITradeSide, Coin } from "@prisma/client";
 
 /*
 |--------------------------------------------------------------------------
@@ -14,7 +11,7 @@ import type {
 | AI TONKEEPER ne passe AUCUN ordre externe.
 |
 | Il n'y a :
-| - aucune API Bybit
+| - aucune API d'exchange externe
 | - aucune clé API
 | - aucun ordre réel
 | - aucun orderId externe
@@ -53,11 +50,7 @@ export type ExecuteTradeResult = {
 |--------------------------------------------------------------------------
 */
 
-const SUPPORTED_COINS: Coin[] = [
-  "BTC",
-  "ETH",
-  "BNB",
-];
+const SUPPORTED_COINS: Coin[] = ["BTC", "ETH", "BNB"];
 
 /*
 |--------------------------------------------------------------------------
@@ -65,9 +58,7 @@ const SUPPORTED_COINS: Coin[] = [
 |--------------------------------------------------------------------------
 */
 
-function failed(
-  message: string
-): ExecuteTradeResult {
+function failed(message: string): ExecuteTradeResult {
   return {
     success: false,
     simulated: true,
@@ -96,17 +87,10 @@ function failed(
 */
 
 export async function executeAITrade(
-  input: ExecuteTradeInput
+  input: ExecuteTradeInput,
 ): Promise<ExecuteTradeResult> {
   try {
-    const {
-      userId,
-      coin,
-      side,
-      amount,
-      price,
-      confidence,
-    } = input;
+    const { userId, coin, side, amount, price, confidence } = input;
 
     /*
     |--------------------------------------------------------------------------
@@ -115,56 +99,27 @@ export async function executeAITrade(
     */
 
     if (!userId) {
-      return failed(
-        "User ID is required."
-      );
+      return failed("User ID is required.");
     }
 
-    if (
-      !SUPPORTED_COINS.includes(
-        coin
-      )
-    ) {
-      return failed(
-        `${coin} is not supported by AI Trading.`
-      );
+    if (!SUPPORTED_COINS.includes(coin)) {
+      return failed(`${coin} is not supported by AI Trading.`);
     }
 
-    if (
-      side !== "BUY" &&
-      side !== "SELL"
-    ) {
-      return failed(
-        "Invalid AI trade side."
-      );
+    if (side !== "BUY" && side !== "SELL") {
+      return failed("Invalid AI trade side.");
     }
 
-    if (
-      !Number.isFinite(amount) ||
-      amount <= 0
-    ) {
-      return failed(
-        "Invalid trade amount."
-      );
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return failed("Invalid trade amount.");
     }
 
-    if (
-      !Number.isFinite(price) ||
-      price <= 0
-    ) {
-      return failed(
-        "Invalid market price."
-      );
+    if (!Number.isFinite(price) || price <= 0) {
+      return failed("Invalid market price.");
     }
 
-    if (
-      !Number.isFinite(confidence) ||
-      confidence < 0 ||
-      confidence > 100
-    ) {
-      return failed(
-        "Invalid confidence."
-      );
+    if (!Number.isFinite(confidence) || confidence < 0 || confidence > 100) {
+      return failed("Invalid confidence.");
     }
 
     /*
@@ -173,27 +128,22 @@ export async function executeAITrade(
     |--------------------------------------------------------------------------
     */
 
-    const user =
-      await prisma.user.findUnique({
-        where: {
-          id: userId,
-        },
-        select: {
-          id: true,
-          accountLocked: true,
-        },
-      });
+    const user = await prisma.user.findUnique({
+      where: {
+        id: userId,
+      },
+      select: {
+        id: true,
+        accountLocked: true,
+      },
+    });
 
     if (!user) {
-      return failed(
-        "User not found."
-      );
+      return failed("User not found.");
     }
 
     if (user.accountLocked) {
-      return failed(
-        "User account is locked."
-      );
+      return failed("User account is locked.");
     }
 
     /*
@@ -202,17 +152,14 @@ export async function executeAITrade(
     |--------------------------------------------------------------------------
     */
 
-    const settings =
-      await prisma.aITradeSettings.findUnique({
-        where: {
-          userId,
-        },
-      });
+    const settings = await prisma.aITradeSettings.findUnique({
+      where: {
+        userId,
+      },
+    });
 
     if (!settings) {
-      return failed(
-        "AI Trading settings not found."
-      );
+      return failed("AI Trading settings not found.");
     }
 
     /*
@@ -222,9 +169,7 @@ export async function executeAITrade(
     */
 
     if (!settings.enabled) {
-      return failed(
-        "AI Trading is not enabled."
-      );
+      return failed("AI Trading is not enabled.");
     }
 
     /*
@@ -234,9 +179,7 @@ export async function executeAITrade(
     */
 
     if (settings.emergencyStop) {
-      return failed(
-        "AI Trading emergency stop is active."
-      );
+      return failed("AI Trading emergency stop is active.");
     }
 
     /*
@@ -245,30 +188,18 @@ export async function executeAITrade(
     |--------------------------------------------------------------------------
     */
 
-    const minimumConfidence =
-      Number(
-        settings.minimumConfidence
-      );
+    const minimumConfidence = Number(settings.minimumConfidence);
 
     if (
-      !Number.isFinite(
-        minimumConfidence
-      ) ||
+      !Number.isFinite(minimumConfidence) ||
       minimumConfidence < 0 ||
       minimumConfidence > 100
     ) {
-      return failed(
-        "AI minimum confidence setting is invalid."
-      );
+      return failed("AI minimum confidence setting is invalid.");
     }
 
-    if (
-      confidence <
-      minimumConfidence
-    ) {
-      return failed(
-        "Trade confidence is below the configured minimum."
-      );
+    if (confidence < minimumConfidence) {
+      return failed("Trade confidence is below the configured minimum.");
     }
 
     /*
@@ -277,21 +208,14 @@ export async function executeAITrade(
     |--------------------------------------------------------------------------
     */
 
-    const maximumAllocation =
-      Number(
-        settings.maximumTradeAllocation
-      );
+    const maximumAllocation = Number(settings.maximumTradeAllocation);
 
     if (
-      !Number.isFinite(
-        maximumAllocation
-      ) ||
+      !Number.isFinite(maximumAllocation) ||
       maximumAllocation <= 0 ||
       maximumAllocation > 100
     ) {
-      return failed(
-        "Maximum trade allocation is invalid."
-      );
+      return failed("Maximum trade allocation is invalid.");
     }
 
     /*
@@ -300,8 +224,7 @@ export async function executeAITrade(
     |--------------------------------------------------------------------------
     */
 
-    const pair =
-      `${coin}/USDT`;
+    const pair = `${coin}/USDT`;
 
     /*
     |--------------------------------------------------------------------------
@@ -316,38 +239,24 @@ export async function executeAITrade(
     |
     */
 
-    const balanceCoin: Coin =
-      side === "BUY"
-        ? "USDT"
-        : coin;
+    const balanceCoin: Coin = side === "BUY" ? "USDT" : coin;
 
-    const balance =
-      await prisma.balance.findUnique({
-        where: {
-          userId_coin: {
-            userId,
-            coin: balanceCoin,
-          },
+    const balance = await prisma.balance.findUnique({
+      where: {
+        userId_coin: {
+          userId,
+          coin: balanceCoin,
         },
-        select: {
-          balance: true,
-        },
-      });
+      },
+      select: {
+        balance: true,
+      },
+    });
 
-    const availableBalance =
-      Number(
-        balance?.balance ?? 0
-      );
+    const availableBalance = Number(balance?.balance ?? 0);
 
-    if (
-      !Number.isFinite(
-        availableBalance
-      ) ||
-      availableBalance <= 0
-    ) {
-      return failed(
-        `No available ${balanceCoin} balance.`
-      );
+    if (!Number.isFinite(availableBalance) || availableBalance <= 0) {
+      return failed(`No available ${balanceCoin} balance.`);
     }
 
     /*
@@ -356,19 +265,10 @@ export async function executeAITrade(
     |--------------------------------------------------------------------------
     */
 
-    const maximumTradeAmount =
-      availableBalance *
-      (maximumAllocation / 100);
+    const maximumTradeAmount = availableBalance * (maximumAllocation / 100);
 
-    if (
-      !Number.isFinite(
-        maximumTradeAmount
-      ) ||
-      maximumTradeAmount <= 0
-    ) {
-      return failed(
-        "Maximum trade amount is invalid."
-      );
+    if (!Number.isFinite(maximumTradeAmount) || maximumTradeAmount <= 0) {
+      return failed("Maximum trade amount is invalid.");
     }
 
     /*
@@ -377,13 +277,8 @@ export async function executeAITrade(
     |--------------------------------------------------------------------------
     */
 
-    if (
-      amount >
-      maximumTradeAmount
-    ) {
-      return failed(
-        "Trade amount exceeds the configured maximum allocation."
-      );
+    if (amount > maximumTradeAmount) {
+      return failed("Trade amount exceeds the configured maximum allocation.");
     }
 
     /*
@@ -392,13 +287,8 @@ export async function executeAITrade(
     |--------------------------------------------------------------------------
     */
 
-    if (
-      amount >
-      availableBalance
-    ) {
-      return failed(
-        `Insufficient ${balanceCoin} balance.`
-      );
+    if (amount > availableBalance) {
+      return failed(`Insufficient ${balanceCoin} balance.`);
     }
 
     /*
@@ -407,22 +297,19 @@ export async function executeAITrade(
     |--------------------------------------------------------------------------
     */
 
-    const existingTrade =
-      await prisma.aITrade.findFirst({
-        where: {
-          userId,
-          coin,
-          status: "OPEN",
-        },
-        select: {
-          id: true,
-        },
-      });
+    const existingTrade = await prisma.aITrade.findFirst({
+      where: {
+        userId,
+        coin,
+        status: "OPEN",
+      },
+      select: {
+        id: true,
+      },
+    });
 
     if (existingTrade) {
-      return failed(
-        `An AI trade is already open for ${pair}.`
-      );
+      return failed(`An AI trade is already open for ${pair}.`);
     }
 
     /*
@@ -438,40 +325,37 @@ export async function executeAITrade(
     |
     */
 
-    const trade =
-      await prisma.aITrade.create({
-        data: {
-          userId,
+    const trade = await prisma.aITrade.create({
+      data: {
+        userId,
 
-          settingsId:
-            settings.id,
+        settingsId: settings.id,
 
-          coin,
+        coin,
 
-          pair,
+        pair,
 
-          side,
+        side,
 
-          status: "OPEN",
+        status: "OPEN",
 
-          amount,
+        amount,
 
-          entryPrice: price,
+        entryPrice: price,
 
-          currentPrice: price,
+        currentPrice: price,
 
-          exitPrice: null,
+        exitPrice: null,
 
-          profit: 0,
+        profit: 0,
 
-          fee: 0,
+        fee: 0,
 
-          confidence,
+        confidence,
 
-          openedAt:
-            new Date(),
-        },
-      });
+        openedAt: new Date(),
+      },
+    });
 
     /*
     |--------------------------------------------------------------------------
@@ -479,22 +363,21 @@ export async function executeAITrade(
     |--------------------------------------------------------------------------
     */
 
-    const latestDecision =
-      await prisma.aITradeDecision.findFirst({
-        where: {
-          userId,
-          settingsId: settings.id,
-          coin,
-          signal: side,
-          executed: false,
-        },
-        orderBy: {
-          createdAt: "desc",
-        },
-        select: {
-          id: true,
-        },
-      });
+    const latestDecision = await prisma.aITradeDecision.findFirst({
+      where: {
+        userId,
+        settingsId: settings.id,
+        coin,
+        signal: side,
+        executed: false,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      select: {
+        id: true,
+      },
+    });
 
     if (latestDecision) {
       await prisma.aITradeDecision.update({
@@ -522,21 +405,16 @@ export async function executeAITrade(
        */
       simulated: true,
 
-      message:
-        `AI ${side} simulation opened for ${pair}. No external order was submitted.`,
+      message: `AI ${side} simulation opened for ${pair}. No external order was submitted.`,
 
-      tradeId:
-        trade.id,
+      tradeId: trade.id,
 
       orderId: null,
 
       orderLinkId: null,
     };
   } catch (error) {
-    console.error(
-      "AI TRADE SIMULATOR ERROR:",
-      error
-    );
+    console.error("AI TRADE SIMULATOR ERROR:", error);
 
     return {
       success: false,

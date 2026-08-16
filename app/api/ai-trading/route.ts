@@ -8,46 +8,78 @@ import { Coin } from "@prisma/client";
 | AI TONKEEPER — AI TRADING API
 |--------------------------------------------------------------------------
 |
+| MARKET DATA
+| CoinGecko
+|
+| TRADING ENGINE
+| AI TONKEEPER
+|
+| POSITIONS
+| Stored internally in AITrade
+|
+| IMPORTANT
+| No external exchange is used.
+| No external order is created.
+|
+|--------------------------------------------------------------------------
+|
 | AI TRADING ASSETS
 |
 | BTC
 | ETH
 | BNB
 |
-| TON:
+| TON
 | - supported by AI TONKEEPER
 | - can exist in user balances
 | - monitored separately
-| - NOT traded through Bybit AI Trading
+| - not currently traded by AI Trading
 |
-| USDT:
+| USDT
 | - quote currency
-| - NOT an AI trading asset
+| - not an AI trading asset
 |
 |--------------------------------------------------------------------------
 */
 
-const AI_TRADABLE_COINS: Coin[] = [
-  Coin.BTC,
-  Coin.ETH,
-  Coin.BNB,
-];
+const AI_TRADABLE_COINS: Coin[] = [Coin.BTC, Coin.ETH, Coin.BNB];
 
 type TradeSignal = "BUY" | "SELL" | "WAIT";
 
-type BybitTicker = {
-  symbol: string;
-  lastPrice: string;
-};
+/*
+|--------------------------------------------------------------------------
+| COINGECKO
+|--------------------------------------------------------------------------
+*/
 
-type BybitTickerResponse = {
-  retCode: number;
-  retMsg: string;
-  result?: {
-    category?: string;
-    list?: BybitTicker[];
-  };
-};
+type CoinGeckoPriceResponse = Record<
+  string,
+  {
+    usd?: number;
+  }
+>;
+
+/*
+|--------------------------------------------------------------------------
+| COINGECKO COIN IDS
+|--------------------------------------------------------------------------
+*/
+
+function getCoinGeckoId(coin: Coin): string | null {
+  switch (coin) {
+    case Coin.BTC:
+      return "bitcoin";
+
+    case Coin.ETH:
+      return "ethereum";
+
+    case Coin.BNB:
+      return "binancecoin";
+
+    default:
+      return null;
+  }
+}
 
 /*
 |--------------------------------------------------------------------------
@@ -55,10 +87,7 @@ type BybitTickerResponse = {
 |--------------------------------------------------------------------------
 */
 
-function jsonError(
-  message: string,
-  status = 400
-) {
+function jsonError(message: string, status = 400) {
   return NextResponse.json(
     {
       success: false,
@@ -66,7 +95,7 @@ function jsonError(
     },
     {
       status,
-    }
+    },
   );
 }
 
@@ -96,177 +125,106 @@ async function getAuthenticatedUser() {
 |--------------------------------------------------------------------------
 */
 
-async function getOrCreateSettings(
-  userId: string
-) {
-  let settings =
-    await prisma.aITradeSettings.findUnique({
-      where: {
-        userId,
-      },
-    });
+async function getOrCreateSettings(userId: string) {
+  const existingSettings = await prisma.aITradeSettings.findUnique({
+    where: {
+      userId,
+    },
+  });
 
-  if (!settings) {
-    settings =
-      await prisma.aITradeSettings.create({
-        data: {
-          userId,
-
-          strategy: "BALANCED",
-
-          riskLevel: "MEDIUM",
-
-          minimumConfidence: 70,
-
-          maximumTradeAllocation: 10,
-
-          stopLossProtection: true,
-
-          dailyLossProtection: true,
-
-          emergencyStop: true,
-
-          enabled: false,
-        },
-      });
+  if (existingSettings) {
+    return existingSettings;
   }
 
-  return settings;
+  return prisma.aITradeSettings.create({
+    data: {
+      userId,
+
+      strategy: "BALANCED",
+
+      riskLevel: "MEDIUM",
+
+      minimumConfidence: 70,
+
+      maximumTradeAllocation: 10,
+
+      stopLossProtection: true,
+
+      dailyLossProtection: true,
+
+      emergencyStop: true,
+
+      enabled: false,
+    },
+  });
 }
 
 /*
 |--------------------------------------------------------------------------
-| BYBIT SYMBOL
-|--------------------------------------------------------------------------
-*/
-
-function getBybitSymbol(
-  coin: Coin
-) {
-  switch (coin) {
-    case Coin.BTC:
-      return "BTCUSDT";
-
-    case Coin.ETH:
-      return "ETHUSDT";
-
-    case Coin.BNB:
-      return "BNBUSDT";
-
-    default:
-      return null;
-  }
-}
-
-/*
-|--------------------------------------------------------------------------
-| GET ALL BYBIT PRICES
+| GET COINGECKO PRICES
 |--------------------------------------------------------------------------
 |
-| One public Bybit request.
+| One public request for all AI trading assets.
 |
 | BTC
 | ETH
 | BNB
 |
-| TON is intentionally excluded.
-|
 |--------------------------------------------------------------------------
 */
 
-async function getBybitPrices(): Promise<
-  Partial<Record<Coin, number>>
-> {
+async function getCoinGeckoPrices(): Promise<Partial<Record<Coin, number>>> {
   try {
-    const baseUrl =
-      process.env.BYBIT_BASE_URL ||
-      "https://api.bybit.com";
+    const coinIds = AI_TRADABLE_COINS.map((coin) =>
+      getCoinGeckoId(coin),
+    ).filter((id): id is string => Boolean(id));
 
-    const response =
-      await fetch(
-        `${baseUrl}/v5/market/tickers?category=spot`,
-        {
-          method: "GET",
+    if (coinIds.length === 0) {
+      return {};
+    }
 
-          cache: "no-store",
+    const url =
+      "https://api.coingecko.com/api/v3/simple/price" +
+      `?ids=${encodeURIComponent(coinIds.join(","))}` +
+      "&vs_currencies=usd";
 
-          headers: {
-            Accept:
-              "application/json",
-          },
-        }
-      );
+    const response = await fetch(url, {
+      method: "GET",
+
+      cache: "no-store",
+
+      headers: {
+        Accept: "application/json",
+      },
+    });
 
     if (!response.ok) {
-      console.error(
-        "BYBIT PRICE HTTP ERROR:",
-        response.status
-      );
+      console.error("COINGECKO PRICE HTTP ERROR:", response.status);
 
       return {};
     }
 
-    const data =
-      (await response.json()) as BybitTickerResponse;
+    const data = (await response.json()) as CoinGeckoPriceResponse;
 
-    if (
-      data.retCode !== 0
-    ) {
-      console.error(
-        "BYBIT PRICE API ERROR:",
-        data.retCode,
-        data.retMsg
-      );
-
-      return {};
-    }
-
-    const list =
-      data.result?.list ?? [];
-
-    const prices: Partial<
-      Record<Coin, number>
-    > = {};
+    const prices: Partial<Record<Coin, number>> = {};
 
     for (const coin of AI_TRADABLE_COINS) {
-      const symbol =
-        getBybitSymbol(coin);
+      const coinId = getCoinGeckoId(coin);
 
-      if (!symbol) {
+      if (!coinId) {
         continue;
       }
 
-      const ticker =
-        list.find(
-          (item) =>
-            item.symbol ===
-            symbol
-        );
+      const price = Number(data?.[coinId]?.usd);
 
-      if (!ticker) {
-        continue;
-      }
-
-      const price =
-        Number(
-          ticker.lastPrice
-        );
-
-      if (
-        Number.isFinite(price) &&
-        price > 0
-      ) {
-        prices[coin] =
-          price;
+      if (Number.isFinite(price) && price > 0) {
+        prices[coin] = price;
       }
     }
 
     return prices;
   } catch (error) {
-    console.error(
-      "BYBIT PRICE FETCH ERROR:",
-      error
-    );
+    console.error("COINGECKO PRICE FETCH ERROR:", error);
 
     return {};
   }
@@ -274,95 +232,50 @@ async function getBybitPrices(): Promise<
 
 /*
 |--------------------------------------------------------------------------
-| GET ONE BYBIT PRICE
+| GET ONE COINGECKO PRICE
 |--------------------------------------------------------------------------
 */
 
-async function getBybitPrice(
-  coin: Coin
-): Promise<number> {
-  const symbol =
-    getBybitSymbol(coin);
+async function getCoinGeckoPrice(coin: Coin): Promise<number> {
+  const coinId = getCoinGeckoId(coin);
 
-  if (!symbol) {
+  if (!coinId) {
     return 0;
   }
 
   try {
-    const baseUrl =
-      process.env.BYBIT_BASE_URL ||
-      "https://api.bybit.com";
+    const url =
+      "https://api.coingecko.com/api/v3/simple/price" +
+      `?ids=${encodeURIComponent(coinId)}` +
+      "&vs_currencies=usd";
 
-    const response =
-      await fetch(
-        `${baseUrl}/v5/market/tickers?category=spot&symbol=${encodeURIComponent(
-          symbol
-        )}`,
-        {
-          method: "GET",
+    const response = await fetch(url, {
+      method: "GET",
 
-          cache: "no-store",
+      cache: "no-store",
 
-          headers: {
-            Accept:
-              "application/json",
-          },
-        }
-      );
+      headers: {
+        Accept: "application/json",
+      },
+    });
 
     if (!response.ok) {
-      console.error(
-        `BYBIT PRICE HTTP ERROR (${coin}):`,
-        response.status
-      );
+      console.error(`COINGECKO PRICE HTTP ERROR (${coin}):`, response.status);
 
       return 0;
     }
 
-    const data =
-      (await response.json()) as BybitTickerResponse;
+    const data = (await response.json()) as CoinGeckoPriceResponse;
 
-    if (
-      data.retCode !== 0
-    ) {
-      console.error(
-        `BYBIT PRICE API ERROR (${coin}):`,
-        data.retCode,
-        data.retMsg
-      );
+    const price = Number(data?.[coinId]?.usd);
 
-      return 0;
-    }
-
-    const ticker =
-      data.result?.list?.find(
-        (item) =>
-          item.symbol ===
-          symbol
-      );
-
-    if (!ticker) {
-      return 0;
-    }
-
-    const price =
-      Number(
-        ticker.lastPrice
-      );
-
-    if (
-      !Number.isFinite(price) ||
-      price <= 0
-    ) {
+    if (!Number.isFinite(price) || price <= 0) {
       return 0;
     }
 
     return price;
   } catch (error) {
-    console.error(
-      `BYBIT PRICE ERROR (${coin}):`,
-      error
-    );
+    console.error(`COINGECKO PRICE ERROR (${coin}):`, error);
 
     return 0;
   }
@@ -374,9 +287,7 @@ async function getBybitPrice(
 |--------------------------------------------------------------------------
 */
 
-async function getUserTrades(
-  userId: string
-) {
+async function getUserTrades(userId: string) {
   return prisma.aITrade.findMany({
     where: {
       userId,
@@ -396,32 +307,18 @@ async function getUserTrades(
 |--------------------------------------------------------------------------
 */
 
-async function buildAiTradingData(
-  userId: string
-) {
-  const settings =
-    await prisma.aITradeSettings.findUnique({
-      where: {
-        userId,
-      },
-    });
+async function buildAiTradingData(userId: string) {
+  const settings = await prisma.aITradeSettings.findUnique({
+    where: {
+      userId,
+    },
+  });
 
-  const trades =
-    await getUserTrades(userId);
+  const trades = await getUserTrades(userId);
 
-  const closedTrades =
-    trades.filter(
-      (trade) =>
-        trade.status ===
-        "CLOSED"
-    );
+  const closedTrades = trades.filter((trade) => trade.status === "CLOSED");
 
-  const openTrades =
-    trades.filter(
-      (trade) =>
-        trade.status ===
-        "OPEN"
-    );
+  const openTrades = trades.filter((trade) => trade.status === "OPEN");
 
   /*
   |--------------------------------------------------------------------------
@@ -429,15 +326,10 @@ async function buildAiTradingData(
   |--------------------------------------------------------------------------
   */
 
-  const totalProfit =
-    closedTrades.reduce(
-      (total, trade) =>
-        total +
-        Number(
-          trade.profit ?? 0
-        ),
-      0
-    );
+  const totalProfit = closedTrades.reduce(
+    (total, trade) => total + Number(trade.profit ?? 0),
+    0,
+  );
 
   /*
   |--------------------------------------------------------------------------
@@ -445,19 +337,13 @@ async function buildAiTradingData(
   |--------------------------------------------------------------------------
   */
 
-  const winningTrades =
-    closedTrades.filter(
-      (trade) =>
-        Number(
-          trade.profit ?? 0
-        ) > 0
-    );
+  const winningTrades = closedTrades.filter(
+    (trade) => Number(trade.profit ?? 0) > 0,
+  );
 
   const winRate =
     closedTrades.length > 0
-      ? (winningTrades.length /
-          closedTrades.length) *
-        100
+      ? (winningTrades.length / closedTrades.length) * 100
       : 0;
 
   /*
@@ -466,36 +352,19 @@ async function buildAiTradingData(
   |--------------------------------------------------------------------------
   */
 
-  const todayStart =
-    new Date();
+  const todayStart = new Date();
 
-  todayStart.setHours(
-    0,
-    0,
-    0,
-    0
-  );
+  todayStart.setHours(0, 0, 0, 0);
 
-  const todayProfit =
-    closedTrades
-      .filter((trade) => {
-        if (!trade.closedAt) {
-          return false;
-        }
+  const todayProfit = closedTrades
+    .filter((trade) => {
+      if (!trade.closedAt) {
+        return false;
+      }
 
-        return (
-          trade.closedAt >=
-          todayStart
-        );
-      })
-      .reduce(
-        (total, trade) =>
-          total +
-          Number(
-            trade.profit ?? 0
-          ),
-        0
-      );
+      return trade.closedAt >= todayStart;
+    })
+    .reduce((total, trade) => total + Number(trade.profit ?? 0), 0);
 
   /*
   |--------------------------------------------------------------------------
@@ -503,16 +372,15 @@ async function buildAiTradingData(
   |--------------------------------------------------------------------------
   */
 
-  const latestDecision =
-    await prisma.aITradeDecision.findFirst({
-      where: {
-        userId,
-      },
+  const latestDecision = await prisma.aITradeDecision.findFirst({
+    where: {
+      userId,
+    },
 
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
 
   /*
   |--------------------------------------------------------------------------
@@ -520,16 +388,11 @@ async function buildAiTradingData(
   |--------------------------------------------------------------------------
   */
 
-  let status:
-    | "ACTIVE"
-    | "PAUSED"
-    | "STOPPED";
+  let status: "ACTIVE" | "PAUSED" | "STOPPED";
 
   if (settings?.enabled) {
     status = "ACTIVE";
-  } else if (
-    openTrades.length > 0
-  ) {
+  } else if (openTrades.length > 0) {
     status = "PAUSED";
   } else {
     status = "STOPPED";
@@ -541,69 +404,42 @@ async function buildAiTradingData(
   |--------------------------------------------------------------------------
   */
 
-  const mappedTrades =
-    trades.map((trade) => ({
-      id: trade.id,
+  const mappedTrades = trades.map((trade) => ({
+    id: trade.id,
 
-      coin: trade.coin,
+    coin: trade.coin,
 
-      pair: trade.pair,
+    pair: trade.pair,
 
-      side: trade.side,
+    side: trade.side,
 
-      amount: Number(
-        trade.amount ?? 0
-      ),
+    amount: Number(trade.amount ?? 0),
 
-      entryPrice: Number(
-        trade.entryPrice ?? 0
-      ),
+    entryPrice: Number(trade.entryPrice ?? 0),
 
-      currentPrice: Number(
-        trade.currentPrice ?? 0
-      ),
+    currentPrice: Number(trade.currentPrice ?? 0),
 
-      exitPrice:
-        trade.exitPrice === null
-          ? null
-          : Number(
-              trade.exitPrice
-            ),
+    exitPrice: trade.exitPrice === null ? null : Number(trade.exitPrice),
 
-      profit: Number(
-        trade.profit ?? 0
-      ),
+    profit: Number(trade.profit ?? 0),
 
-      fee: Number(
-        trade.fee ?? 0
-      ),
+    fee: Number(trade.fee ?? 0),
 
-      confidence: Number(
-        trade.confidence ?? 0
-      ),
+    confidence: Number(trade.confidence ?? 0),
 
-      status: trade.status,
+    status: trade.status,
 
-      openedAt:
-        trade.openedAt?.toISOString() ??
-        null,
+    openedAt: trade.openedAt?.toISOString() ?? null,
 
-      closedAt:
-        trade.closedAt?.toISOString() ??
-        null,
+    closedAt: trade.closedAt?.toISOString() ?? null,
 
-      createdAt:
-        trade.createdAt.toISOString(),
-    }));
+    createdAt: trade.createdAt.toISOString(),
+  }));
 
   return {
     status,
 
-    confidence:
-      Number(
-        latestDecision?.confidence ??
-          0
-      ),
+    confidence: Number(latestDecision?.confidence ?? 0),
 
     totalProfit,
 
@@ -611,48 +447,33 @@ async function buildAiTradingData(
 
     winRate,
 
-    openTrades:
-      openTrades.length,
+    openTrades: openTrades.length,
 
-    trades:
-      mappedTrades,
+    trades: mappedTrades,
 
-    lastAnalysis:
-      latestDecision?.reason ??
-      null,
+    lastAnalysis: latestDecision?.reason ?? null,
 
-    updatedAt:
-      new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   };
 }
 
 /*
 |--------------------------------------------------------------------------
-| GET /api/ai-trade
+| GET /api/ai-trading
 |--------------------------------------------------------------------------
 */
 
 export async function GET() {
   try {
-    const user =
-      await getAuthenticatedUser();
+    const user = await getAuthenticatedUser();
 
     if (!user) {
-      return jsonError(
-        "Authentication required.",
-        401
-      );
+      return jsonError("Authentication required.", 401);
     }
 
-    const settings =
-      await getOrCreateSettings(
-        user.id
-      );
+    const settings = await getOrCreateSettings(user.id);
 
-    const aiTrading =
-      await buildAiTradingData(
-        user.id
-      );
+    const aiTrading = await buildAiTradingData(user.id);
 
     return NextResponse.json({
       success: true,
@@ -670,10 +491,7 @@ export async function GET() {
       settings,
     });
   } catch (error) {
-    console.error(
-      "AI TRADE GET ERROR:",
-      error
-    );
+    console.error("AI TRADE GET ERROR:", error);
 
     return NextResponse.json(
       {
@@ -701,20 +519,19 @@ export async function GET() {
 
           lastAnalysis: null,
 
-          updatedAt:
-            new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
         },
       },
       {
         status: 500,
-      }
+      },
     );
   }
 }
 
 /*
 |--------------------------------------------------------------------------
-| POST /api/ai-trade
+| POST /api/ai-trading
 |--------------------------------------------------------------------------
 |
 | START
@@ -727,9 +544,7 @@ export async function GET() {
 |--------------------------------------------------------------------------
 */
 
-export async function POST(
-  request: NextRequest
-) {
+export async function POST(request: NextRequest) {
   try {
     /*
     |--------------------------------------------------------------------------
@@ -737,14 +552,10 @@ export async function POST(
     |--------------------------------------------------------------------------
     */
 
-    const user =
-      await getAuthenticatedUser();
+    const user = await getAuthenticatedUser();
 
     if (!user) {
-      return jsonError(
-        "Authentication required.",
-        401
-      );
+      return jsonError("Authentication required.", 401);
     }
 
     /*
@@ -753,30 +564,17 @@ export async function POST(
     |--------------------------------------------------------------------------
     */
 
-    let body: Record<
-      string,
-      unknown
-    >;
+    let body: Record<string, unknown>;
 
     try {
-      body =
-        (await request.json()) as Record<
-          string,
-          unknown
-        >;
+      body = (await request.json()) as Record<string, unknown>;
     } catch {
-      return jsonError(
-        "Invalid request body.",
-        400
-      );
+      return jsonError("Invalid request body.", 400);
     }
 
-    const action =
-      String(
-        body.action ?? ""
-      )
-        .trim()
-        .toUpperCase();
+    const action = String(body.action ?? "")
+      .trim()
+      .toUpperCase();
 
     /*
     |--------------------------------------------------------------------------
@@ -784,10 +582,7 @@ export async function POST(
     |--------------------------------------------------------------------------
     */
 
-    const settings =
-      await getOrCreateSettings(
-        user.id
-      );
+    const settings = await getOrCreateSettings(user.id);
 
     /*
     |--------------------------------------------------------------------------
@@ -795,9 +590,7 @@ export async function POST(
     |--------------------------------------------------------------------------
     */
 
-    if (
-      action === "START"
-    ) {
+    if (action === "START") {
       await prisma.aITradeSettings.update({
         where: {
           userId: user.id,
@@ -808,16 +601,12 @@ export async function POST(
         },
       });
 
-      const aiTrading =
-        await buildAiTradingData(
-          user.id
-        );
+      const aiTrading = await buildAiTradingData(user.id);
 
       return NextResponse.json({
         success: true,
 
-        message:
-          "AI Trading started.",
+        message: "AI Trading started.",
 
         aiTrading,
       });
@@ -829,9 +618,7 @@ export async function POST(
     |--------------------------------------------------------------------------
     */
 
-    if (
-      action === "PAUSE"
-    ) {
+    if (action === "PAUSE") {
       await prisma.aITradeSettings.update({
         where: {
           userId: user.id,
@@ -842,16 +629,12 @@ export async function POST(
         },
       });
 
-      const aiTrading =
-        await buildAiTradingData(
-          user.id
-        );
+      const aiTrading = await buildAiTradingData(user.id);
 
       return NextResponse.json({
         success: true,
 
-        message:
-          "AI Trading paused.",
+        message: "AI Trading paused.",
 
         aiTrading,
       });
@@ -863,9 +646,7 @@ export async function POST(
     |--------------------------------------------------------------------------
     */
 
-    if (
-      action === "STOP"
-    ) {
+    if (action === "STOP") {
       await prisma.aITradeSettings.update({
         where: {
           userId: user.id,
@@ -876,16 +657,12 @@ export async function POST(
         },
       });
 
-      const aiTrading =
-        await buildAiTradingData(
-          user.id
-        );
+      const aiTrading = await buildAiTradingData(user.id);
 
       return NextResponse.json({
         success: true,
 
-        message:
-          "AI Trading stopped.",
+        message: "AI Trading stopped.",
 
         aiTrading,
       });
@@ -896,77 +673,52 @@ export async function POST(
     | ANALYZE
     |--------------------------------------------------------------------------
     |
-    | IMPORTANT:
+    | CoinGecko fournit les prix réels.
     |
-    | One Bybit request.
-    |
-    | BTC
-    | ETH
-    | BNB
-    |
-    | No TON request.
-    | No /api/crypto request.
+    | Aucun ordre externe.
     |
     |--------------------------------------------------------------------------
     */
 
-    if (
-      action === "ANALYZE"
-    ) {
-      const prices =
-        await getBybitPrices();
+    if (action === "ANALYZE") {
+      const prices = await getCoinGeckoPrices();
 
-      const validPrices =
-        Object.values(
-          prices
-        ).filter(
-          (price) =>
-            typeof price ===
-              "number" &&
-            Number.isFinite(
-              price
-            ) &&
-            price > 0
-        );
+      const validPrices = Object.values(prices).filter(
+        (price) =>
+          typeof price === "number" && Number.isFinite(price) && price > 0,
+      );
 
-      if (
-        validPrices.length ===
-        0
-      ) {
+      if (validPrices.length === 0) {
         return NextResponse.json(
           {
             success: false,
 
-            message:
-              "Unable to retrieve crypto market prices from Bybit.",
+            message: "Unable to retrieve crypto market prices from CoinGecko.",
 
-            aiTrading:
-              await buildAiTradingData(
-                user.id
-              ),
+            aiTrading: await buildAiTradingData(user.id),
           },
           {
             status: 503,
-          }
+          },
         );
       }
 
       /*
       |--------------------------------------------------------------------------
-      | SAFE ANALYSIS
+      | CURRENT SAFE SIGNAL
       |--------------------------------------------------------------------------
       |
-      | No automatic BUY/SELL.
+      | For now the analysis does not
+      | automatically open a position.
       |
       */
 
-      const signal: TradeSignal =
-        "WAIT";
+      const signal: TradeSignal = "WAIT";
 
       const confidence = 50;
 
       const analysis =
-        "AI is monitoring BTC, ETH and BNB using live Bybit market prices. TON remains supported by AI TONKEEPER but is not traded through Bybit.";
+        "AI is monitoring BTC, ETH and BNB using live CoinGecko market prices. Trading positions are managed internally by AI TONKEEPER.";
 
       /*
       |--------------------------------------------------------------------------
@@ -974,47 +726,34 @@ export async function POST(
       |--------------------------------------------------------------------------
       */
 
-      const decision =
-        await prisma.aITradeDecision.create({
-          data: {
-            userId:
-              user.id,
+      const decision = await prisma.aITradeDecision.create({
+        data: {
+          userId: user.id,
 
-            settingsId:
-              settings.id,
+          settingsId: settings.id,
 
-            coin: Coin.BTC,
+          coin: Coin.BTC,
 
-            pair:
-              "BTC/USDT",
+          pair: "BTC/USDT",
 
-            signal,
+          signal,
 
-            confidence,
+          confidence,
 
-            price:
-              prices[
-                Coin.BTC
-              ] ?? 0,
+          price: prices[Coin.BTC] ?? 0,
 
-            reason:
-              analysis,
+          reason: analysis,
 
-            executed:
-              false,
-          },
-        });
+          executed: false,
+        },
+      });
 
-      const aiTrading =
-        await buildAiTradingData(
-          user.id
-        );
+      const aiTrading = await buildAiTradingData(user.id);
 
       return NextResponse.json({
         success: true,
 
-        message:
-          "Market analysis completed.",
+        message: "Market analysis completed.",
 
         analysis: {
           success: true,
@@ -1027,8 +766,7 @@ export async function POST(
 
           analysis,
 
-          timestamp:
-            decision.createdAt.toISOString(),
+          timestamp: decision.createdAt.toISOString(),
         },
 
         aiTrading,
@@ -1037,14 +775,20 @@ export async function POST(
 
     /*
     |--------------------------------------------------------------------------
-    | OPEN TRADE
+    | OPEN INTERNAL TRADE
+    |--------------------------------------------------------------------------
+    |
+    | IMPORTANT
+    |
+    | This only creates a position
+    | inside AI TONKEEPER.
+    |
+    | No external order is created.
+    |
     |--------------------------------------------------------------------------
     */
 
-    if (
-      action ===
-      "OPEN_TRADE"
-    ) {
+    if (action === "OPEN_TRADE") {
       /*
       |--------------------------------------------------------------------------
       | AI MUST BE ACTIVE
@@ -1052,10 +796,7 @@ export async function POST(
       */
 
       if (!settings.enabled) {
-        return jsonError(
-          "AI Trading is not active.",
-          400
-        );
+        return jsonError("AI Trading is not active.", 400);
       }
 
       /*
@@ -1064,35 +805,26 @@ export async function POST(
       |--------------------------------------------------------------------------
       */
 
-      const coinValue =
-        String(
-          body.coin ?? ""
-        )
-          .trim()
-          .toUpperCase();
+      const coinValue = String(body.coin ?? "")
+        .trim()
+        .toUpperCase();
 
       /*
       |--------------------------------------------------------------------------
-      | ONLY BTC / ETH / BNB
+      | SUPPORTED COINS
       |--------------------------------------------------------------------------
       */
 
-      if (
-        !AI_TRADABLE_COINS.includes(
-          coinValue as Coin
-        )
-      ) {
+      if (!AI_TRADABLE_COINS.includes(coinValue as Coin)) {
         return jsonError(
           `${
-            coinValue ||
-            "This coin"
-          } is not currently tradable by AI Trading. Supported AI trading assets: BTC, ETH and BNB. TON remains supported by AI TONKEEPER but is not traded through Bybit.`,
-          400
+            coinValue || "This coin"
+          } is not currently supported by AI Trading. Supported assets: BTC, ETH and BNB.`,
+          400,
         );
       }
 
-      const coin =
-        coinValue as Coin;
+      const coin = coinValue as Coin;
 
       /*
       |--------------------------------------------------------------------------
@@ -1100,38 +832,24 @@ export async function POST(
       |--------------------------------------------------------------------------
       */
 
-      const amount =
-        Number(
-          body.amount ?? 0
-        );
+      const amount = Number(body.amount ?? 0);
 
-      if (
-        !Number.isFinite(
-          amount
-        ) ||
-        amount <= 0
-      ) {
-        return jsonError(
-          "Invalid trade amount.",
-          400
-        );
+      if (!Number.isFinite(amount) || amount <= 0) {
+        return jsonError("Invalid trade amount.", 400);
       }
 
       /*
       |--------------------------------------------------------------------------
-      | CURRENT PRICE
+      | CURRENT MARKET PRICE
       |--------------------------------------------------------------------------
       */
 
-      const price =
-        await getBybitPrice(
-          coin
-        );
+      const price = await getCoinGeckoPrice(coin);
 
       if (price <= 0) {
         return jsonError(
-          `Unable to retrieve current ${coin} price from Bybit.`,
-          503
+          `Unable to retrieve current ${coin} price from CoinGecko.`,
+          503,
         );
       }
 
@@ -1141,79 +859,62 @@ export async function POST(
       |--------------------------------------------------------------------------
       */
 
-      const existingTrade =
-        await prisma.aITrade.findFirst({
-          where: {
-            userId:
-              user.id,
+      const existingTrade = await prisma.aITrade.findFirst({
+        where: {
+          userId: user.id,
 
-            coin,
+          coin,
 
-            status: "OPEN",
-          },
-        });
+          status: "OPEN",
+        },
+      });
 
       if (existingTrade) {
-        return jsonError(
-          `There is already an open ${coin} AI trade.`,
-          400
-        );
+        return jsonError(`There is already an open ${coin} AI trade.`, 400);
       }
 
       /*
       |--------------------------------------------------------------------------
-      | CREATE TRADE
+      | CREATE INTERNAL POSITION
       |--------------------------------------------------------------------------
       */
 
-      const trade =
-        await prisma.aITrade.create({
-          data: {
-            userId:
-              user.id,
+      const trade = await prisma.aITrade.create({
+        data: {
+          userId: user.id,
 
-            settingsId:
-              settings.id,
+          settingsId: settings.id,
 
-            coin,
+          coin,
 
-            pair:
-              `${coin}/USDT`,
+          pair: `${coin}/USDT`,
 
-            side: "BUY",
+          side: "BUY",
 
-            status: "OPEN",
+          status: "OPEN",
 
-            amount,
+          amount,
 
-            entryPrice:
-              price,
+          entryPrice: price,
 
-            currentPrice:
-              price,
+          currentPrice: price,
 
-            profit: 0,
+          profit: 0,
 
-            fee: 0,
+          fee: 0,
 
-            confidence:
-              settings.minimumConfidence,
+          confidence: settings.minimumConfidence,
 
-            openedAt:
-              new Date(),
-          },
-        });
+          openedAt: new Date(),
+        },
+      });
 
-      const aiTrading =
-        await buildAiTradingData(
-          user.id
-        );
+      const aiTrading = await buildAiTradingData(user.id);
 
       return NextResponse.json({
         success: true,
 
-        message:
-          `${coin} trade opened.`,
+        message: `${coin} internal AI trade opened.`,
 
         trade,
 
@@ -1223,30 +924,26 @@ export async function POST(
 
     /*
     |--------------------------------------------------------------------------
-    | CLOSE TRADE
+    | CLOSE INTERNAL TRADE
+    |--------------------------------------------------------------------------
+    |
+    | Only the internal AITrade position
+    | is updated.
+    |
     |--------------------------------------------------------------------------
     */
 
-    if (
-      action ===
-      "CLOSE_TRADE"
-    ) {
+    if (action === "CLOSE_TRADE") {
       /*
       |--------------------------------------------------------------------------
       | TRADE ID
       |--------------------------------------------------------------------------
       */
 
-      const tradeId =
-        String(
-          body.tradeId ?? ""
-        ).trim();
+      const tradeId = String(body.tradeId ?? "").trim();
 
       if (!tradeId) {
-        return jsonError(
-          "Trade ID is required.",
-          400
-        );
+        return jsonError("Trade ID is required.", 400);
       }
 
       /*
@@ -1255,21 +952,16 @@ export async function POST(
       |--------------------------------------------------------------------------
       */
 
-      const trade =
-        await prisma.aITrade.findFirst({
-          where: {
-            id: tradeId,
+      const trade = await prisma.aITrade.findFirst({
+        where: {
+          id: tradeId,
 
-            userId:
-              user.id,
-          },
-        });
+          userId: user.id,
+        },
+      });
 
       if (!trade) {
-        return jsonError(
-          "Trade not found.",
-          404
-        );
+        return jsonError("Trade not found.", 404);
       }
 
       /*
@@ -1278,50 +970,35 @@ export async function POST(
       |--------------------------------------------------------------------------
       */
 
-      if (
-        trade.status !==
-        "OPEN"
-      ) {
+      if (trade.status !== "OPEN") {
+        return jsonError("Trade is already closed.", 400);
+      }
+
+      /*
+      |--------------------------------------------------------------------------
+      | SUPPORTED AI ASSET
+      |--------------------------------------------------------------------------
+      */
+
+      if (!AI_TRADABLE_COINS.includes(trade.coin)) {
         return jsonError(
-          "Trade is already closed.",
-          400
+          `${trade.coin} is not currently supported by the AI Trading engine.`,
+          400,
         );
       }
 
       /*
       |--------------------------------------------------------------------------
-      | ONLY BYBIT TRADABLE COINS
+      | CURRENT MARKET PRICE
       |--------------------------------------------------------------------------
       */
 
-      if (
-        !AI_TRADABLE_COINS.includes(
-          trade.coin
-        )
-      ) {
+      const currentPrice = await getCoinGeckoPrice(trade.coin);
+
+      if (currentPrice <= 0) {
         return jsonError(
-          `${trade.coin} is not tradable through the Bybit AI Trading engine.`,
-          400
-        );
-      }
-
-      /*
-      |--------------------------------------------------------------------------
-      | CURRENT PRICE
-      |--------------------------------------------------------------------------
-      */
-
-      const currentPrice =
-        await getBybitPrice(
-          trade.coin
-        );
-
-      if (
-        currentPrice <= 0
-      ) {
-        return jsonError(
-          `Unable to retrieve current ${trade.coin} price from Bybit.`,
-          503
+          `Unable to retrieve current ${trade.coin} price from CoinGecko.`,
+          503,
         );
       }
 
@@ -1331,42 +1008,35 @@ export async function POST(
       |--------------------------------------------------------------------------
       */
 
-      const profit =
-        (currentPrice -
-          Number(
-            trade.entryPrice
-          )) *
-        Number(
-          trade.amount
-        );
+      const entryPrice = Number(trade.entryPrice);
+
+      const amount = Number(trade.amount);
+
+      const profit = (currentPrice - entryPrice) * amount;
 
       /*
       |--------------------------------------------------------------------------
-      | UPDATE TRADE
+      | CLOSE INTERNAL POSITION
       |--------------------------------------------------------------------------
       */
 
-      const updatedTrade =
-        await prisma.aITrade.update({
-          where: {
-            id: trade.id,
-          },
+      const updatedTrade = await prisma.aITrade.update({
+        where: {
+          id: trade.id,
+        },
 
-          data: {
-            currentPrice,
+        data: {
+          currentPrice,
 
-            exitPrice:
-              currentPrice,
+          exitPrice: currentPrice,
 
-            profit,
+          profit,
 
-            status:
-              "CLOSED",
+          status: "CLOSED",
 
-            closedAt:
-              new Date(),
-          },
-        });
+          closedAt: new Date(),
+        },
+      });
 
       /*
       |--------------------------------------------------------------------------
@@ -1374,19 +1044,14 @@ export async function POST(
       |--------------------------------------------------------------------------
       */
 
-      const aiTrading =
-        await buildAiTradingData(
-          user.id
-        );
+      const aiTrading = await buildAiTradingData(user.id);
 
       return NextResponse.json({
         success: true,
 
-        message:
-          `${trade.coin} trade closed.`,
+        message: `${trade.coin} internal AI trade closed.`,
 
-        trade:
-          updatedTrade,
+        trade: updatedTrade,
 
         aiTrading,
       });
@@ -1400,22 +1065,17 @@ export async function POST(
 
     return jsonError(
       "Invalid action. Supported actions: START, PAUSE, STOP, ANALYZE, OPEN_TRADE, CLOSE_TRADE.",
-      400
+      400,
     );
   } catch (error) {
-    console.error(
-      "AI TRADE POST ERROR:",
-      error
-    );
+    console.error("AI TRADE POST ERROR:", error);
 
     return NextResponse.json(
       {
         success: false,
 
         message:
-          error instanceof Error
-            ? error.message
-            : "AI Trading API error.",
+          error instanceof Error ? error.message : "AI Trading API error.",
 
         aiTrading: {
           status: "STOPPED",
@@ -1434,13 +1094,12 @@ export async function POST(
 
           lastAnalysis: null,
 
-          updatedAt:
-            new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
         },
       },
       {
         status: 500,
-      }
+      },
     );
   }
 }

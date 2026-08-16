@@ -1,95 +1,108 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { Coin } from "@prisma/client";
 import { auth } from "@/auth";
+import { Coin } from "@prisma/client";
 
 /*
 |--------------------------------------------------------------------------
-| AI TONKEEPER — AI TRADING ENGINE
+| AI TONKEEPER — AI TRADING API
 |--------------------------------------------------------------------------
 |
-| Market data:
+| MARKET DATA
 | CoinGecko
 |
-| Trading engine:
+| TRADING ENGINE
 | AI TONKEEPER
 |
-| Orders:
-| Stored in AITrade
+| ORDERS / POSITIONS
+| Stored internally in AITrade
 |
-| The AI analyzes real market data and creates/updates trading
-| positions inside AI TONKEEPER.
+| IMPORTANT
+| AI Trading does NOT send orders to Bybit
+| or to any other exchange.
+|
+|--------------------------------------------------------------------------
+|
+| AI TRADING ASSETS
+|
+| BTC
+| ETH
+| BNB
+|
+| TON:
+| - supported by AI TONKEEPER
+| - can exist in user balances
+| - monitored separately
+| - not currently traded by AI Trading
+|
+| USDT:
+| - quote currency
+| - not an AI trading asset
 |
 |--------------------------------------------------------------------------
 */
 
-const AI_SUPPORTED_COINS: Coin[] = [
-  Coin.TON,
+const AI_TRADABLE_COINS: Coin[] = [
   Coin.BTC,
   Coin.ETH,
   Coin.BNB,
-  Coin.USDT,
 ];
 
 type TradeSignal = "BUY" | "SELL" | "WAIT";
 
-type CoinGeckoCoin = {
-  usd?: number;
-  usd_24h_change?: number;
-  usd_24h_vol?: number;
-  usd_market_cap?: number;
-  usd_24h_high?: number;
-  usd_24h_low?: number;
-};
-
-type CoinGeckoResponse = Record<
-  string,
-  CoinGeckoCoin
->;
-
-type MarketPrice = {
-  symbol: string;
-  success: boolean;
-  message?: string;
-  price: number;
-  change24h?: number;
-  high24h?: number;
-  low24h?: number;
-  volume24h?: number;
-  marketCap?: number;
-};
-
-type TradingStatus =
-  | "ACTIVE"
-  | "PAUSED"
-  | "STOPPED";
-
 /*
 |--------------------------------------------------------------------------
-| COINGECKO IDS
+| COINGECKO TYPES
 |--------------------------------------------------------------------------
 */
 
-const COINGECKO_IDS: Record<
-  string,
-  string
-> = {
-  TON: "the-open-network",
-  BTC: "bitcoin",
-  ETH: "ethereum",
-  BNB: "binancecoin",
-  USDT: "tether",
+type CoinGeckoMarketData = {
+  id: string;
+  symbol: string;
+  name: string;
+  current_price: number | null;
+  last_updated?: string;
 };
+
+type CoinGeckoResponse = CoinGeckoMarketData[];
 
 /*
 |--------------------------------------------------------------------------
-| ERROR
+| COINGECKO COIN IDS
+|--------------------------------------------------------------------------
+|
+| Coin enum -> CoinGecko ID
+|
+|--------------------------------------------------------------------------
+*/
+
+function getCoinGeckoId(
+  coin: Coin
+): string | null {
+  switch (coin) {
+    case Coin.BTC:
+      return "bitcoin";
+
+    case Coin.ETH:
+      return "ethereum";
+
+    case Coin.BNB:
+      return "binancecoin";
+
+    default:
+      return null;
+  }
+}
+
+/*
+|--------------------------------------------------------------------------
+| ERROR RESPONSE
 |--------------------------------------------------------------------------
 */
 
 function jsonError(
   message: string,
-  status = 400,
+  status = 400
 ) {
   return NextResponse.json(
     {
@@ -98,7 +111,7 @@ function jsonError(
     },
     {
       status,
-    },
+    }
   );
 }
 
@@ -124,116 +137,153 @@ async function getAuthenticatedUser() {
 
 /*
 |--------------------------------------------------------------------------
-| SETTINGS
+| CREATE SETTINGS IF NEEDED
 |--------------------------------------------------------------------------
 */
 
 async function getOrCreateSettings(
-  userId: string,
+  userId: string
 ) {
-  const existing =
+  let settings =
     await prisma.aITradeSettings.findUnique({
       where: {
         userId,
       },
     });
 
-  if (existing) {
-    return existing;
+  if (!settings) {
+    settings =
+      await prisma.aITradeSettings.create({
+        data: {
+          userId,
+
+          strategy: "BALANCED",
+
+          riskLevel: "MEDIUM",
+
+          minimumConfidence: 70,
+
+          maximumTradeAllocation: 10,
+
+          stopLossProtection: true,
+
+          dailyLossProtection: true,
+
+          emergencyStop: true,
+
+          enabled: false,
+        },
+      });
   }
 
-  return prisma.aITradeSettings.create({
-    data: {
-      userId,
-
-      strategy: "BALANCED",
-
-      riskLevel: "MEDIUM",
-
-      minimumConfidence: 70,
-
-      maximumTradeAllocation: 10,
-
-      stopLossProtection: true,
-
-      dailyLossProtection: true,
-
-      emergencyStop: true,
-
-      enabled: false,
-
-      orderCount: 0,
-    },
-  });
+  return settings;
 }
 
 /*
 |--------------------------------------------------------------------------
-| REAL MARKET DATA
+| GET ALL COINGECKO PRICES
+|--------------------------------------------------------------------------
+|
+| One public CoinGecko request.
+|
+| BTC
+| ETH
+| BNB
+|
+| TON is intentionally excluded from AI trading.
+|
 |--------------------------------------------------------------------------
 */
 
-async function getRealMarketData(): Promise<
-  Partial<Record<Coin, CoinGeckoCoin>>
+async function getCoinGeckoPrices(): Promise<
+  Partial<Record<Coin, number>>
 > {
   try {
-    const ids = Object.values(
-      COINGECKO_IDS,
-    ).join(",");
+    const coinIds =
+      AI_TRADABLE_COINS
+        .map((coin) =>
+          getCoinGeckoId(coin)
+        )
+        .filter(
+          (
+            id
+          ): id is string =>
+            Boolean(id)
+        );
+
+    if (
+      coinIds.length === 0
+    ) {
+      return {};
+    }
 
     const url =
       "https://api.coingecko.com/api/v3/simple/price" +
-      `?ids=${encodeURIComponent(ids)}` +
-      "&vs_currencies=usd" +
-      "&include_24hr_change=true" +
-      "&include_24hr_vol=true" +
-      "&include_market_cap=true" +
-      "&include_24hr_high=true" +
-      "&include_24hr_low=true";
+      `?ids=${encodeURIComponent(
+        coinIds.join(",")
+      )}` +
+      "&vs_currencies=usd";
 
-    const response = await fetch(url, {
-      method: "GET",
-      cache: "no-store",
-      headers: {
-        Accept: "application/json",
-      },
-    });
+    const response =
+      await fetch(url, {
+        method: "GET",
+
+        cache: "no-store",
+
+        headers: {
+          Accept:
+            "application/json",
+        },
+      });
 
     if (!response.ok) {
       console.error(
-        "COINGECKO HTTP ERROR:",
-        response.status,
+        "COINGECKO PRICE HTTP ERROR:",
+        response.status
       );
 
       return {};
     }
 
     const data =
-      (await response.json()) as CoinGeckoResponse;
+      (await response.json()) as Record<
+        string,
+        {
+          usd?: number;
+        }
+      >;
 
-    const marketData: Partial<
-      Record<Coin, CoinGeckoCoin>
+    const prices: Partial<
+      Record<Coin, number>
     > = {};
 
-    for (const coin of AI_SUPPORTED_COINS) {
-      const id = COINGECKO_IDS[coin];
+    for (const coin of AI_TRADABLE_COINS) {
+      const coinId =
+        getCoinGeckoId(coin);
 
-      if (!id) {
+      if (!coinId) {
         continue;
       }
 
-      if (!data[id]) {
-        continue;
-      }
+      const price =
+        Number(
+          data?.[coinId]?.usd
+        );
 
-      marketData[coin] = data[id];
+      if (
+        Number.isFinite(price) &&
+        price > 0
+      ) {
+        prices[coin] =
+          price;
+      }
     }
 
-    return marketData;
+    return prices;
   } catch (error) {
     console.error(
-      "REAL MARKET DATA ERROR:",
-      error,
+      "COINGECKO PRICE FETCH ERROR:",
+      error
     );
 
     return {};
@@ -242,106 +292,61 @@ async function getRealMarketData(): Promise<
 
 /*
 |--------------------------------------------------------------------------
-| FORMAT MARKET PRICES
+| GET ONE COINGECKO PRICE
 |--------------------------------------------------------------------------
 */
 
-function formatMarketPrices(
-  marketData: Partial<
-    Record<Coin, CoinGeckoCoin>
-  >,
-): MarketPrice[] {
-  return AI_SUPPORTED_COINS.map(
-    (coin) => {
-      const data = marketData[coin];
-
-      const price = Number(
-        data?.usd ?? 0,
-      );
-
-      if (
-        !Number.isFinite(price) ||
-        price <= 0
-      ) {
-        return {
-          symbol: `${coin}USDT`,
-          success: false,
-          message:
-            "Market price unavailable.",
-          price: 0,
-        };
-      }
-
-      return {
-        symbol: `${coin}USDT`,
-
-        success: true,
-
-        price,
-
-        change24h: Number(
-          data?.usd_24h_change ?? 0,
-        ),
-
-        high24h: Number(
-          data?.usd_24h_high ?? 0,
-        ),
-
-        low24h: Number(
-          data?.usd_24h_low ?? 0,
-        ),
-
-        volume24h: Number(
-          data?.usd_24h_vol ?? 0,
-        ),
-
-        marketCap: Number(
-          data?.usd_market_cap ?? 0,
-        ),
-      };
-    },
-  );
-}
-
-/*
-|--------------------------------------------------------------------------
-| ONE REAL MARKET PRICE
-|--------------------------------------------------------------------------
-*/
-
-async function getRealMarketPrice(
-  coin: Coin,
+async function getCoinGeckoPrice(
+  coin: Coin
 ): Promise<number> {
-  const id = COINGECKO_IDS[coin];
+  const coinId =
+    getCoinGeckoId(coin);
 
-  if (!id) {
+  if (!coinId) {
     return 0;
   }
 
   try {
     const url =
       "https://api.coingecko.com/api/v3/simple/price" +
-      `?ids=${encodeURIComponent(id)}` +
+      `?ids=${encodeURIComponent(
+        coinId
+      )}` +
       "&vs_currencies=usd";
 
-    const response = await fetch(url, {
-      method: "GET",
-      cache: "no-store",
-      headers: {
-        Accept: "application/json",
-      },
-    });
+    const response =
+      await fetch(url, {
+        method: "GET",
+
+        cache: "no-store",
+
+        headers: {
+          Accept:
+            "application/json",
+        },
+      });
 
     if (!response.ok) {
+      console.error(
+        `COINGECKO PRICE HTTP ERROR (${coin}):`,
+        response.status
+      );
+
       return 0;
     }
 
     const data =
-      (await response.json()) as CoinGeckoResponse;
+      (await response.json()) as Record<
+        string,
+        {
+          usd?: number;
+        }
+      >;
 
-    const price = Number(
-      data[id]?.usd ?? 0,
-    );
+    const price =
+      Number(
+        data?.[coinId]?.usd
+      );
 
     if (
       !Number.isFinite(price) ||
@@ -353,8 +358,8 @@ async function getRealMarketPrice(
     return price;
   } catch (error) {
     console.error(
-      `REAL PRICE ERROR (${coin}):`,
-      error,
+      `COINGECKO PRICE ERROR (${coin}):`,
+      error
     );
 
     return 0;
@@ -363,12 +368,12 @@ async function getRealMarketPrice(
 
 /*
 |--------------------------------------------------------------------------
-| USER TRADES
+| LOAD USER TRADES
 |--------------------------------------------------------------------------
 */
 
 async function getUserTrades(
-  userId: string,
+  userId: string
 ) {
   return prisma.aITrade.findMany({
     where: {
@@ -385,85 +390,12 @@ async function getUserTrades(
 
 /*
 |--------------------------------------------------------------------------
-| REFRESH OPEN TRADES
-|--------------------------------------------------------------------------
-*/
-
-async function refreshOpenTrades(
-  userId: string,
-) {
-  const openTrades =
-    await prisma.aITrade.findMany({
-      where: {
-        userId,
-        status: "OPEN",
-      },
-    });
-
-  if (openTrades.length === 0) {
-    return;
-  }
-
-  for (const trade of openTrades) {
-    const currentPrice =
-      await getRealMarketPrice(
-        trade.coin,
-      );
-
-    if (
-      !Number.isFinite(
-        currentPrice,
-      ) ||
-      currentPrice <= 0
-    ) {
-      continue;
-    }
-
-    const entryPrice = Number(
-      trade.entryPrice ?? 0,
-    );
-
-    const amount = Number(
-      trade.amount ?? 0,
-    );
-
-    let profit = 0;
-
-    if (
-      trade.side === "BUY"
-    ) {
-      profit =
-        (currentPrice -
-          entryPrice) *
-        amount;
-    } else {
-      profit =
-        (entryPrice -
-          currentPrice) *
-        amount;
-    }
-
-    await prisma.aITrade.update({
-      where: {
-        id: trade.id,
-      },
-
-      data: {
-        currentPrice,
-        profit,
-      },
-    });
-  }
-}
-
-/*
-|--------------------------------------------------------------------------
 | BUILD AI TRADING DATA
 |--------------------------------------------------------------------------
 */
 
 async function buildAiTradingData(
-  userId: string,
+  userId: string
 ) {
   const settings =
     await prisma.aITradeSettings.findUnique({
@@ -472,39 +404,51 @@ async function buildAiTradingData(
       },
     });
 
-  await refreshOpenTrades(userId);
-
   const trades =
     await getUserTrades(userId);
 
   const closedTrades =
     trades.filter(
       (trade) =>
-        trade.status === "CLOSED",
+        trade.status ===
+        "CLOSED"
     );
 
   const openTrades =
     trades.filter(
       (trade) =>
-        trade.status === "OPEN",
+        trade.status ===
+        "OPEN"
     );
+
+  /*
+  |--------------------------------------------------------------------------
+  | TOTAL PROFIT
+  |--------------------------------------------------------------------------
+  */
 
   const totalProfit =
     closedTrades.reduce(
       (total, trade) =>
         total +
         Number(
-          trade.profit ?? 0,
+          trade.profit ?? 0
         ),
-      0,
+      0
     );
+
+  /*
+  |--------------------------------------------------------------------------
+  | WIN RATE
+  |--------------------------------------------------------------------------
+  */
 
   const winningTrades =
     closedTrades.filter(
       (trade) =>
         Number(
-          trade.profit ?? 0,
-        ) > 0,
+          trade.profit ?? 0
+        ) > 0
     );
 
   const winRate =
@@ -514,6 +458,12 @@ async function buildAiTradingData(
         100
       : 0;
 
+  /*
+  |--------------------------------------------------------------------------
+  | TODAY PROFIT
+  |--------------------------------------------------------------------------
+  */
+
   const todayStart =
     new Date();
 
@@ -521,7 +471,7 @@ async function buildAiTradingData(
     0,
     0,
     0,
-    0,
+    0
   );
 
   const todayProfit =
@@ -540,25 +490,38 @@ async function buildAiTradingData(
         (total, trade) =>
           total +
           Number(
-            trade.profit ?? 0,
+            trade.profit ?? 0
           ),
-        0,
+        0
       );
 
+  /*
+  |--------------------------------------------------------------------------
+  | LATEST AI DECISION
+  |--------------------------------------------------------------------------
+  */
+
   const latestDecision =
-    await prisma.aITradeDecision.findFirst(
-      {
-        where: {
-          userId,
-        },
-
-        orderBy: {
-          createdAt: "desc",
-        },
+    await prisma.aITradeDecision.findFirst({
+      where: {
+        userId,
       },
-    );
 
-  let status: TradingStatus;
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+  /*
+  |--------------------------------------------------------------------------
+  | STATUS
+  |--------------------------------------------------------------------------
+  */
+
+  let status:
+    | "ACTIVE"
+    | "PAUSED"
+    | "STOPPED";
 
   if (settings?.enabled) {
     status = "ACTIVE";
@@ -569,6 +532,12 @@ async function buildAiTradingData(
   } else {
     status = "STOPPED";
   }
+
+  /*
+  |--------------------------------------------------------------------------
+  | MAP TRADES
+  |--------------------------------------------------------------------------
+  */
 
   const mappedTrades =
     trades.map((trade) => ({
@@ -581,46 +550,44 @@ async function buildAiTradingData(
       side: trade.side,
 
       amount: Number(
-        trade.amount ?? 0,
+        trade.amount ?? 0
       ),
 
       entryPrice: Number(
-        trade.entryPrice ?? 0,
+        trade.entryPrice ?? 0
       ),
 
       currentPrice: Number(
-        trade.currentPrice ?? 0,
+        trade.currentPrice ?? 0
       ),
 
       exitPrice:
         trade.exitPrice === null
           ? null
           : Number(
-              trade.exitPrice,
+              trade.exitPrice
             ),
 
       profit: Number(
-        trade.profit ?? 0,
+        trade.profit ?? 0
       ),
 
       fee: Number(
-        trade.fee ?? 0,
+        trade.fee ?? 0
       ),
 
       confidence: Number(
-        trade.confidence ?? 0,
+        trade.confidence ?? 0
       ),
 
       status: trade.status,
 
       openedAt:
-        trade.openedAt
-          ?.toISOString() ??
+        trade.openedAt?.toISOString() ??
         null,
 
       closedAt:
-        trade.closedAt
-          ?.toISOString() ??
+        trade.closedAt?.toISOString() ??
         null,
 
       createdAt:
@@ -630,10 +597,11 @@ async function buildAiTradingData(
   return {
     status,
 
-    confidence: Number(
-      latestDecision?.confidence ??
-        0,
-    ),
+    confidence:
+      Number(
+        latestDecision?.confidence ??
+          0
+      ),
 
     totalProfit,
 
@@ -644,11 +612,8 @@ async function buildAiTradingData(
     openTrades:
       openTrades.length,
 
-    orderCount: Number(
-      settings?.orderCount ?? 0,
-    ),
-
-    trades: mappedTrades,
+    trades:
+      mappedTrades,
 
     lastAnalysis:
       latestDecision?.reason ??
@@ -661,550 +626,11 @@ async function buildAiTradingData(
 
 /*
 |--------------------------------------------------------------------------
-| MARKET ANALYSIS
+| GET /api/ai-trade
 |--------------------------------------------------------------------------
 */
 
-function calculateMarketAnalysis(
-  marketData: Partial<
-    Record<Coin, CoinGeckoCoin>
-  >,
-) {
-  const btcChange =
-    Number(
-      marketData[Coin.BTC]
-        ?.usd_24h_change ?? 0,
-    );
-
-  const ethChange =
-    Number(
-      marketData[Coin.ETH]
-        ?.usd_24h_change ?? 0,
-    );
-
-  const tonChange =
-    Number(
-      marketData[Coin.TON]
-        ?.usd_24h_change ?? 0,
-    );
-
-  const bnbChange =
-    Number(
-      marketData[Coin.BNB]
-        ?.usd_24h_change ?? 0,
-    );
-
-  const changes = [
-    btcChange,
-    ethChange,
-    tonChange,
-    bnbChange,
-  ].filter((value) =>
-    Number.isFinite(value),
-  );
-
-  const averageChange =
-    changes.length > 0
-      ? changes.reduce(
-          (sum, value) =>
-            sum + value,
-          0,
-        ) / changes.length
-      : 0;
-
-  let signal: TradeSignal;
-
-  if (
-    averageChange >= 1 &&
-    btcChange > 0
-  ) {
-    signal = "BUY";
-  } else if (
-    averageChange <= -1 &&
-    btcChange < 0
-  ) {
-    signal = "SELL";
-  } else {
-    signal = "WAIT";
-  }
-
-  let confidence =
-    50 +
-    Math.abs(
-      averageChange,
-    ) *
-      8;
-
-  if (
-    btcChange > 0 &&
-    ethChange > 0
-  ) {
-    confidence += 8;
-  }
-
-  if (
-    btcChange < 0 &&
-    ethChange < 0
-  ) {
-    confidence += 8;
-  }
-
-  confidence = Math.min(
-    Math.max(
-      Math.round(
-        confidence,
-      ),
-      0,
-    ),
-    95,
-  );
-
-  let condition =
-    "The cryptocurrency market is currently showing mixed movement.";
-
-  if (
-    averageChange >= 1
-  ) {
-    condition =
-      "The cryptocurrency market is showing positive momentum.";
-  } else if (
-    averageChange <= -1
-  ) {
-    condition =
-      "The cryptocurrency market is showing negative momentum.";
-  }
-
-  const analysis =
-    `${condition} ` +
-    `Bitcoin is ${
-      btcChange >= 0
-        ? "up"
-        : "down"
-    } ${Math.abs(
-      btcChange,
-    ).toFixed(2)}% over the last 24 hours, ` +
-    `Ethereum is ${
-      ethChange >= 0
-        ? "up"
-        : "down"
-    } ${Math.abs(
-      ethChange,
-    ).toFixed(2)}%, ` +
-    `TON is ${
-      tonChange >= 0
-        ? "up"
-        : "down"
-    } ${Math.abs(
-      tonChange,
-    ).toFixed(2)}%, ` +
-    `and BNB is ${
-      bnbChange >= 0
-        ? "up"
-        : "down"
-    } ${Math.abs(
-      bnbChange,
-    ).toFixed(2)}%. ` +
-    `The current market signal is ${signal} ` +
-    `with an estimated confidence of ${confidence}%.`;
-
-  return {
-    signal,
-
-    confidence,
-
-    analysis,
-
-    prices: {
-      BTC: Number(
-        marketData[Coin.BTC]
-          ?.usd ?? 0,
-      ),
-
-      ETH: Number(
-        marketData[Coin.ETH]
-          ?.usd ?? 0,
-      ),
-
-      TON: Number(
-        marketData[Coin.TON]
-          ?.usd ?? 0,
-      ),
-
-      BNB: Number(
-        marketData[Coin.BNB]
-          ?.usd ?? 0,
-      ),
-
-      USDT: Number(
-        marketData[Coin.USDT]
-          ?.usd ?? 0,
-      ),
-    },
-  };
-}
-
-/*
-|--------------------------------------------------------------------------
-| CREATE AI ORDER
-|--------------------------------------------------------------------------
-|
-| Creates a real AITrade record in the platform database.
-|
-|--------------------------------------------------------------------------
-*/
-
-async function createAIOrder({
-  userId,
-  settingsId,
-  coin,
-  price,
-  confidence,
-}: {
-  userId: string;
-  settingsId: string;
-  coin: Coin;
-  price: number;
-  confidence: number;
-}) {
-  if (
-    !Number.isFinite(price) ||
-    price <= 0
-  ) {
-    return null;
-  }
-
-  const existing =
-    await prisma.aITrade.findFirst({
-      where: {
-        userId,
-        coin,
-        status: "OPEN",
-      },
-    });
-
-  if (existing) {
-    return existing;
-  }
-
-  /*
-  |--------------------------------------------------------------------------
-  | Order amount
-  |--------------------------------------------------------------------------
-  |
-  | maximumTradeAllocation is treated as the amount allocated
-  | to the AI order in the platform's trading accounting.
-  |
-  |--------------------------------------------------------------------------
-  */
-
-  const configuredAmount =
-    Number(
-      settingsId
-        ? 0
-        : 0,
-    );
-
-  void configuredAmount;
-
-  const settings =
-    await prisma.aITradeSettings.findUnique({
-      where: {
-        id: settingsId,
-      },
-    });
-
-  const allocation =
-    Number(
-      settings
-        ?.maximumTradeAllocation ??
-        10,
-    );
-
-  const amount =
-    Number.isFinite(
-      allocation,
-    ) &&
-    allocation > 0
-      ? allocation
-      : 10;
-
-  const trade =
-    await prisma.aITrade.create({
-      data: {
-        userId,
-
-        settingsId,
-
-        coin,
-
-        pair: `${coin}/USDT`,
-
-        side: "BUY",
-
-        status: "OPEN",
-
-        amount,
-
-        entryPrice: price,
-
-        currentPrice: price,
-
-        profit: 0,
-
-        fee: 0,
-
-        confidence,
-
-        openedAt:
-          new Date(),
-      },
-    });
-
-  await prisma.aITradeSettings.update(
-    {
-      where: {
-        id: settingsId,
-      },
-
-      data: {
-        orderCount: {
-          increment: 1,
-        },
-      },
-    },
-  );
-
-  return trade;
-}
-
-/*
-|--------------------------------------------------------------------------
-| CLOSE AI ORDER
-|--------------------------------------------------------------------------
-*/
-
-async function closeAIOrder(
-  trade: {
-    id: string;
-    coin: Coin;
-    side: string;
-    amount: unknown;
-    entryPrice: unknown;
-  },
-  currentPrice: number,
-) {
-  const entryPrice =
-    Number(
-      trade.entryPrice ?? 0,
-    );
-
-  const amount =
-    Number(
-      trade.amount ?? 0,
-    );
-
-  let profit = 0;
-
-  if (
-    trade.side === "BUY"
-  ) {
-    profit =
-      (currentPrice -
-        entryPrice) *
-      amount;
-  } else {
-    profit =
-      (entryPrice -
-        currentPrice) *
-      amount;
-  }
-
-  return prisma.aITrade.update({
-    where: {
-      id: trade.id,
-    },
-
-    data: {
-      currentPrice,
-
-      exitPrice:
-        currentPrice,
-
-      profit,
-
-      status: "CLOSED",
-
-      closedAt:
-        new Date(),
-    },
-  });
-}
-
-/*
-|--------------------------------------------------------------------------
-| EXECUTE AI DECISION
-|--------------------------------------------------------------------------
-*/
-
-async function executeAIDecision({
-  userId,
-  settings,
-  signal,
-  confidence,
-  prices,
-}: {
-  userId: string;
-  settings: {
-    id: string;
-    enabled: boolean;
-    minimumConfidence: unknown;
-  };
-  signal: TradeSignal;
-  confidence: number;
-  prices: Record<
-    string,
-    number
-  >;
-}) {
-  if (!settings.enabled) {
-    return {
-      action: "NONE",
-      trade: null,
-    };
-  }
-
-  const minimumConfidence =
-    Number(
-      settings.minimumConfidence ??
-        70,
-    );
-
-  if (
-    confidence <
-    minimumConfidence
-  ) {
-    return {
-      action: "NONE",
-      trade: null,
-    };
-  }
-
-  /*
-  |--------------------------------------------------------------------------
-  | BUY
-  |--------------------------------------------------------------------------
-  */
-
-  if (
-    signal === "BUY"
-  ) {
-    const coin =
-      Coin.BTC;
-
-    const price =
-      Number(
-        prices.BTC ?? 0,
-      );
-
-    if (price <= 0) {
-      return {
-        action: "NONE",
-        trade: null,
-      };
-    }
-
-    const trade =
-      await createAIOrder({
-        userId,
-
-        settingsId:
-          settings.id,
-
-        coin,
-
-        price,
-
-        confidence,
-      });
-
-    return {
-      action: trade
-        ? "BUY"
-        : "NONE",
-
-      trade,
-    };
-  }
-
-  /*
-  |--------------------------------------------------------------------------
-  | SELL
-  |--------------------------------------------------------------------------
-  */
-
-  if (
-    signal === "SELL"
-  ) {
-    const openTrade =
-      await prisma.aITrade.findFirst({
-        where: {
-          userId,
-
-          status: "OPEN",
-        },
-
-        orderBy: {
-          createdAt: "desc",
-        },
-      });
-
-    if (!openTrade) {
-      return {
-        action: "NONE",
-        trade: null,
-      };
-    }
-
-    const price =
-      await getRealMarketPrice(
-        openTrade.coin,
-      );
-
-    if (price <= 0) {
-      return {
-        action: "NONE",
-        trade: null,
-      };
-    }
-
-    const trade =
-      await closeAIOrder(
-        openTrade,
-        price,
-      );
-
-    return {
-      action: "SELL",
-
-      trade,
-    };
-  }
-
-  return {
-    action: "NONE",
-    trade: null,
-  };
-}
-
-/*
-|--------------------------------------------------------------------------
-| GET
-|--------------------------------------------------------------------------
-*/
-
-export async function GET(
-  request: NextRequest,
-) {
+export async function GET() {
   try {
     const user =
       await getAuthenticatedUser();
@@ -1212,31 +638,18 @@ export async function GET(
     if (!user) {
       return jsonError(
         "Authentication required.",
-        401,
+        401
       );
     }
 
     const settings =
       await getOrCreateSettings(
-        user.id,
-      );
-
-    const market =
-      request.nextUrl.searchParams.get(
-        "market",
-      );
-
-    const marketData =
-      await getRealMarketData();
-
-    const prices =
-      formatMarketPrices(
-        marketData,
+        user.id
       );
 
     const aiTrading =
       await buildAiTradingData(
-        user.id,
+        user.id
       );
 
     return NextResponse.json({
@@ -1244,32 +657,20 @@ export async function GET(
 
       user: {
         id: user.id,
+
         email: user.email,
+
         name: user.name,
       },
 
       aiTrading,
 
-      prices,
-
       settings,
-
-      tradingMode:
-        "AI_TRADING",
-
-      marketData:
-        "REAL",
-
-      marketRequest:
-        market === "true",
-
-      ordersEnabled:
-        settings.enabled,
     });
   } catch (error) {
     console.error(
       "AI TRADE GET ERROR:",
-      error,
+      error
     );
 
     return NextResponse.json(
@@ -1294,8 +695,6 @@ export async function GET(
 
           openTrades: 0,
 
-          orderCount: 0,
-
           trades: [],
 
           lastAnalysis: null,
@@ -1303,22 +702,17 @@ export async function GET(
           updatedAt:
             new Date().toISOString(),
         },
-
-        prices: [],
-
-        tradingMode:
-          "AI_TRADING",
       },
       {
         status: 500,
-      },
+      }
     );
   }
 }
 
 /*
 |--------------------------------------------------------------------------
-| POST
+| POST /api/ai-trade
 |--------------------------------------------------------------------------
 |
 | START
@@ -1332,18 +726,30 @@ export async function GET(
 */
 
 export async function POST(
-  request: NextRequest,
+  request: NextRequest
 ) {
   try {
+    /*
+    |--------------------------------------------------------------------------
+    | AUTH
+    |--------------------------------------------------------------------------
+    */
+
     const user =
       await getAuthenticatedUser();
 
     if (!user) {
       return jsonError(
         "Authentication required.",
-        401,
+        401
       );
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | BODY
+    |--------------------------------------------------------------------------
+    */
 
     let body: Record<
       string,
@@ -1359,20 +765,26 @@ export async function POST(
     } catch {
       return jsonError(
         "Invalid request body.",
-        400,
+        400
       );
     }
 
     const action =
       String(
-        body.action ?? "",
+        body.action ?? ""
       )
         .trim()
         .toUpperCase();
 
+    /*
+    |--------------------------------------------------------------------------
+    | SETTINGS
+    |--------------------------------------------------------------------------
+    */
+
     const settings =
       await getOrCreateSettings(
-        user.id,
+        user.id
       );
 
     /*
@@ -1384,22 +796,19 @@ export async function POST(
     if (
       action === "START"
     ) {
-      const updatedSettings =
-        await prisma.aITradeSettings.update(
-          {
-            where: {
-              userId: user.id,
-            },
+      await prisma.aITradeSettings.update({
+        where: {
+          userId: user.id,
+        },
 
-            data: {
-              enabled: true,
-            },
-          },
-        );
+        data: {
+          enabled: true,
+        },
+      });
 
       const aiTrading =
         await buildAiTradingData(
-          user.id,
+          user.id
         );
 
       return NextResponse.json({
@@ -1409,14 +818,6 @@ export async function POST(
           "AI Trading started.",
 
         aiTrading,
-
-        settings:
-          updatedSettings,
-
-        tradingMode:
-          "AI_TRADING",
-
-        ordersEnabled: true,
       });
     }
 
@@ -1429,21 +830,19 @@ export async function POST(
     if (
       action === "PAUSE"
     ) {
-      await prisma.aITradeSettings.update(
-        {
-          where: {
-            userId: user.id,
-          },
-
-          data: {
-            enabled: false,
-          },
+      await prisma.aITradeSettings.update({
+        where: {
+          userId: user.id,
         },
-      );
+
+        data: {
+          enabled: false,
+        },
+      });
 
       const aiTrading =
         await buildAiTradingData(
-          user.id,
+          user.id
         );
 
       return NextResponse.json({
@@ -1453,11 +852,6 @@ export async function POST(
           "AI Trading paused.",
 
         aiTrading,
-
-        tradingMode:
-          "AI_TRADING",
-
-        ordersEnabled: false,
       });
     }
 
@@ -1470,21 +864,19 @@ export async function POST(
     if (
       action === "STOP"
     ) {
-      await prisma.aITradeSettings.update(
-        {
-          where: {
-            userId: user.id,
-          },
-
-          data: {
-            enabled: false,
-          },
+      await prisma.aITradeSettings.update({
+        where: {
+          userId: user.id,
         },
-      );
+
+        data: {
+          enabled: false,
+        },
+      });
 
       const aiTrading =
         await buildAiTradingData(
-          user.id,
+          user.id
         );
 
       return NextResponse.json({
@@ -1494,11 +886,6 @@ export async function POST(
           "AI Trading stopped.",
 
         aiTrading,
-
-        tradingMode:
-          "AI_TRADING",
-
-        ordersEnabled: false,
       });
     }
 
@@ -1506,212 +893,142 @@ export async function POST(
     |--------------------------------------------------------------------------
     | ANALYZE
     |--------------------------------------------------------------------------
+    |
+    | CoinGecko provides the real market prices.
+    |
+    | BTC
+    | ETH
+    | BNB
+    |
+    | No Bybit request.
+    | No exchange order.
+    | No TON request.
+    |
+    |--------------------------------------------------------------------------
     */
 
     if (
       action === "ANALYZE"
     ) {
-      const marketData =
-        await getRealMarketData();
+      const prices =
+        await getCoinGeckoPrices();
 
       const validPrices =
         Object.values(
-          marketData,
-        ).filter((data) => {
-          const price =
-            Number(
-              data?.usd ?? 0,
-            );
-
-          return (
+          prices
+        ).filter(
+          (price) =>
+            typeof price ===
+              "number" &&
             Number.isFinite(
-              price,
+              price
             ) &&
             price > 0
-          );
-        });
+        );
 
       if (
-        validPrices.length === 0
+        validPrices.length ===
+        0
       ) {
         return NextResponse.json(
           {
             success: false,
 
             message:
-              "Unable to retrieve real cryptocurrency market prices.",
+              "Unable to retrieve crypto market prices from CoinGecko.",
 
             aiTrading:
               await buildAiTradingData(
-                user.id,
+                user.id
               ),
-
-            prices: [],
           },
           {
             status: 503,
-          },
+          }
         );
       }
-
-      const result =
-        calculateMarketAnalysis(
-          marketData,
-        );
-
-      const decision =
-        await prisma.aITradeDecision.create(
-          {
-            data: {
-              userId: user.id,
-
-              settingsId:
-                settings.id,
-
-              coin: Coin.BTC,
-
-              pair: "BTC/USDT",
-
-              signal:
-                result.signal,
-
-              confidence:
-                result.confidence,
-
-              price:
-                result.prices.BTC,
-
-              reason:
-                result.analysis,
-
-              executed: false,
-            },
-          },
-        );
 
       /*
       |--------------------------------------------------------------------------
-      | EXECUTE AI ORDER
+      | SAFE ANALYSIS
+      |--------------------------------------------------------------------------
+      |
+      | No automatic BUY/SELL.
+      |
+      */
+
+      const signal: TradeSignal =
+        "WAIT";
+
+      const confidence = 50;
+
+      const analysis =
+        "AI is monitoring BTC, ETH and BNB using live CoinGecko market prices. Trading is handled internally by AI TONKEEPER. No exchange order is sent.";
+
+      /*
+      |--------------------------------------------------------------------------
+      | SAVE DECISION
       |--------------------------------------------------------------------------
       */
 
-      const execution =
-        await executeAIDecision({
-          userId: user.id,
+      const decision =
+        await prisma.aITradeDecision.create({
+          data: {
+            userId:
+              user.id,
 
-          settings,
+            settingsId:
+              settings.id,
 
-          signal:
-            result.signal,
+            coin: Coin.BTC,
 
-          confidence:
-            result.confidence,
+            pair:
+              "BTC/USDT",
 
-          prices:
-            result.prices,
-        });
+            signal,
 
-      if (
-        execution.action !==
-        "NONE"
-      ) {
-        await prisma.aITradeDecision.update(
-          {
-            where: {
-              id: decision.id,
-            },
+            confidence,
 
-            data: {
-              executed: true,
-            },
+            price:
+              prices[
+                Coin.BTC
+              ] ?? 0,
+
+            reason:
+              analysis,
+
+            executed:
+              false,
           },
-        );
-      }
+        });
 
       const aiTrading =
         await buildAiTradingData(
-          user.id,
-        );
-
-      const prices =
-        formatMarketPrices(
-          marketData,
+          user.id
         );
 
       return NextResponse.json({
         success: true,
 
         message:
-          execution.action ===
-          "BUY"
-            ? "AI BUY order created."
-            : execution.action ===
-              "SELL"
-            ? "AI SELL order completed."
-            : "Market analysis completed.",
+          "Market analysis completed.",
 
         analysis: {
           success: true,
 
-          prices:
-            result.prices,
+          prices,
 
-          signal:
-            result.signal,
+          signal,
 
-          confidence:
-            result.confidence,
+          confidence,
 
-          analysis:
-            result.analysis,
+          analysis,
 
           timestamp:
             decision.createdAt.toISOString(),
         },
 
-        order: execution.trade
-          ? {
-              id:
-                execution.trade.id,
-
-              action:
-                execution.action,
-
-              coin:
-                execution.trade.coin,
-
-              pair:
-                execution.trade.pair,
-
-              side:
-                execution.trade.side,
-
-              amount: Number(
-                execution.trade.amount,
-              ),
-
-              price: Number(
-                execution.trade.entryPrice ??
-                  execution.trade.currentPrice,
-              ),
-
-              status:
-                execution.trade.status,
-
-              createdAt:
-                execution.trade.createdAt.toISOString(),
-            }
-          : null,
-
-        prices,
-
         aiTrading,
-
-        tradingMode:
-          "AI_TRADING",
-
-        ordersEnabled:
-          settings.enabled,
       });
     }
 
@@ -1719,202 +1036,193 @@ export async function POST(
     |--------------------------------------------------------------------------
     | OPEN TRADE
     |--------------------------------------------------------------------------
+    |
+    | IMPORTANT:
+    |
+    | This creates an INTERNAL AITrade position only.
+    |
+    | No exchange order is sent.
+    |
+    |--------------------------------------------------------------------------
     */
 
     if (
-      action === "OPEN_TRADE"
+      action ===
+      "OPEN_TRADE"
     ) {
+      /*
+      |--------------------------------------------------------------------------
+      | AI MUST BE ACTIVE
+      |--------------------------------------------------------------------------
+      */
+
       if (!settings.enabled) {
         return jsonError(
           "AI Trading is not active.",
-          400,
+          400
         );
       }
 
+      /*
+      |--------------------------------------------------------------------------
+      | COIN
+      |--------------------------------------------------------------------------
+      */
+
       const coinValue =
         String(
-          body.coin ?? "BTC",
+          body.coin ?? ""
         )
           .trim()
           .toUpperCase();
 
+      /*
+      |--------------------------------------------------------------------------
+      | ONLY BTC / ETH / BNB
+      |--------------------------------------------------------------------------
+      */
+
       if (
-        !AI_SUPPORTED_COINS.includes(
-          coinValue as Coin,
+        !AI_TRADABLE_COINS.includes(
+          coinValue as Coin
         )
       ) {
         return jsonError(
-          "Unsupported AI Trading asset.",
-          400,
+          `${
+            coinValue ||
+            "This coin"
+          } is not currently tradable by AI Trading. Supported AI trading assets: BTC, ETH and BNB. TON remains supported by AI TONKEEPER but is not currently traded by AI Trading.`,
+          400
         );
       }
 
       const coin =
         coinValue as Coin;
 
+      /*
+      |--------------------------------------------------------------------------
+      | AMOUNT
+      |--------------------------------------------------------------------------
+      */
+
       const amount =
         Number(
-          body.amount ?? 0,
+          body.amount ?? 0
         );
-
-      const configuredAmount =
-        Number(
-          settings.maximumTradeAllocation ??
-            10,
-        );
-
-      const finalAmount =
-        Number.isFinite(
-          amount,
-        ) && amount > 0
-          ? amount
-          : configuredAmount;
 
       if (
         !Number.isFinite(
-          finalAmount,
+          amount
         ) ||
-        finalAmount <= 0
+        amount <= 0
       ) {
         return jsonError(
           "Invalid trade amount.",
-          400,
+          400
         );
       }
 
+      /*
+      |--------------------------------------------------------------------------
+      | CURRENT PRICE
+      |--------------------------------------------------------------------------
+      */
+
       const price =
-        await getRealMarketPrice(
-          coin,
+        await getCoinGeckoPrice(
+          coin
         );
 
       if (price <= 0) {
         return jsonError(
-          `Unable to retrieve current ${coin} market price.`,
-          503,
+          `Unable to retrieve current ${coin} price from CoinGecko.`,
+          503
         );
       }
 
+      /*
+      |--------------------------------------------------------------------------
+      | PREVENT DUPLICATE POSITION
+      |--------------------------------------------------------------------------
+      */
+
       const existingTrade =
-        await prisma.aITrade.findFirst(
-          {
-            where: {
-              userId: user.id,
+        await prisma.aITrade.findFirst({
+          where: {
+            userId:
+              user.id,
 
-              coin,
+            coin,
 
-              status: "OPEN",
-            },
+            status: "OPEN",
           },
-        );
+        });
 
       if (existingTrade) {
         return jsonError(
-          `There is already an open ${coin} AI order.`,
-          400,
+          `There is already an open ${coin} AI trade.`,
+          400
         );
       }
 
+      /*
+      |--------------------------------------------------------------------------
+      | CREATE INTERNAL TRADE
+      |--------------------------------------------------------------------------
+      */
+
       const trade =
-        await prisma.aITrade.create(
-          {
-            data: {
-              userId: user.id,
-
-              settingsId:
-                settings.id,
-
-              coin,
-
-              pair: `${coin}/USDT`,
-
-              side: "BUY",
-
-              status: "OPEN",
-
-              amount:
-                finalAmount,
-
-              entryPrice:
-                price,
-
-              currentPrice:
-                price,
-
-              profit: 0,
-
-              fee: 0,
-
-              confidence:
-                Number(
-                  settings.minimumConfidence ??
-                    70,
-                ),
-
-              openedAt:
-                new Date(),
-            },
-          },
-        );
-
-      await prisma.aITradeSettings.update(
-        {
-          where: {
-            id: settings.id,
-          },
-
+        await prisma.aITrade.create({
           data: {
-            orderCount: {
-              increment: 1,
-            },
+            userId:
+              user.id,
+
+            settingsId:
+              settings.id,
+
+            coin,
+
+            pair:
+              `${coin}/USDT`,
+
+            side: "BUY",
+
+            status: "OPEN",
+
+            amount,
+
+            entryPrice:
+              price,
+
+            currentPrice:
+              price,
+
+            profit: 0,
+
+            fee: 0,
+
+            confidence:
+              settings.minimumConfidence,
+
+            openedAt:
+              new Date(),
           },
-        },
-      );
+        });
 
       const aiTrading =
         await buildAiTradingData(
-          user.id,
+          user.id
         );
 
       return NextResponse.json({
         success: true,
 
         message:
-          `${coin} AI order created.`,
+          `${coin} internal AI trade opened.`,
 
-        trade: {
-          ...trade,
-
-          amount: Number(
-            trade.amount,
-          ),
-
-          entryPrice: Number(
-            trade.entryPrice,
-          ),
-
-          currentPrice: Number(
-            trade.currentPrice,
-          ),
-
-          profit: Number(
-            trade.profit,
-          ),
-
-          fee: Number(
-            trade.fee,
-          ),
-
-          confidence: Number(
-            trade.confidence,
-          ),
-        },
+        trade,
 
         aiTrading,
-
-        tradingMode:
-          "AI_TRADING",
-
-        ordersEnabled: true,
       });
     }
 
@@ -1922,131 +1230,196 @@ export async function POST(
     |--------------------------------------------------------------------------
     | CLOSE TRADE
     |--------------------------------------------------------------------------
+    |
+    | IMPORTANT:
+    |
+    | Closing the position only updates the
+    | internal AITrade record.
+    |
+    | No exchange order is sent.
+    |
+    |--------------------------------------------------------------------------
     */
 
     if (
-      action === "CLOSE_TRADE"
+      action ===
+      "CLOSE_TRADE"
     ) {
+      /*
+      |--------------------------------------------------------------------------
+      | TRADE ID
+      |--------------------------------------------------------------------------
+      */
+
       const tradeId =
         String(
-          body.tradeId ?? "",
+          body.tradeId ?? ""
         ).trim();
 
       if (!tradeId) {
         return jsonError(
           "Trade ID is required.",
-          400,
+          400
         );
       }
 
-      const trade =
-        await prisma.aITrade.findFirst(
-          {
-            where: {
-              id: tradeId,
+      /*
+      |--------------------------------------------------------------------------
+      | FIND USER TRADE
+      |--------------------------------------------------------------------------
+      */
 
-              userId: user.id,
-            },
+      const trade =
+        await prisma.aITrade.findFirst({
+          where: {
+            id: tradeId,
+
+            userId:
+              user.id,
           },
-        );
+        });
 
       if (!trade) {
         return jsonError(
           "Trade not found.",
-          404,
+          404
         );
       }
 
+      /*
+      |--------------------------------------------------------------------------
+      | STATUS
+      |--------------------------------------------------------------------------
+      */
+
       if (
-        trade.status !== "OPEN"
+        trade.status !==
+        "OPEN"
       ) {
         return jsonError(
           "Trade is already closed.",
-          400,
+          400
         );
       }
 
+      /*
+      |--------------------------------------------------------------------------
+      | ONLY AI TRADING COINS
+      |--------------------------------------------------------------------------
+      */
+
+      if (
+        !AI_TRADABLE_COINS.includes(
+          trade.coin
+        )
+      ) {
+        return jsonError(
+          `${trade.coin} is not currently supported by the AI Trading engine.`,
+          400
+        );
+      }
+
+      /*
+      |--------------------------------------------------------------------------
+      | CURRENT PRICE
+      |--------------------------------------------------------------------------
+      */
+
       const currentPrice =
-        await getRealMarketPrice(
-          trade.coin,
+        await getCoinGeckoPrice(
+          trade.coin
         );
 
       if (
         currentPrice <= 0
       ) {
         return jsonError(
-          `Unable to retrieve current ${trade.coin} market price.`,
-          503,
+          `Unable to retrieve current ${trade.coin} price from CoinGecko.`,
+          503
         );
       }
 
-      const updatedTrade =
-        await closeAIOrder(
-          trade,
-          currentPrice,
+      /*
+      |--------------------------------------------------------------------------
+      | PROFIT
+      |--------------------------------------------------------------------------
+      */
+
+      const profit =
+        (currentPrice -
+          Number(
+            trade.entryPrice
+          )) *
+        Number(
+          trade.amount
         );
+
+      /*
+      |--------------------------------------------------------------------------
+      | UPDATE INTERNAL TRADE
+      |--------------------------------------------------------------------------
+      */
+
+      const updatedTrade =
+        await prisma.aITrade.update({
+          where: {
+            id: trade.id,
+          },
+
+          data: {
+            currentPrice,
+
+            exitPrice:
+              currentPrice,
+
+            profit,
+
+            status:
+              "CLOSED",
+
+            closedAt:
+              new Date(),
+          },
+        });
+
+      /*
+      |--------------------------------------------------------------------------
+      | RETURN
+      |--------------------------------------------------------------------------
+      */
 
       const aiTrading =
         await buildAiTradingData(
-          user.id,
+          user.id
         );
 
       return NextResponse.json({
         success: true,
 
         message:
-          `${trade.coin} AI order closed.`,
+          `${trade.coin} internal AI trade closed.`,
 
-        trade: {
-          ...updatedTrade,
-
-          amount: Number(
-            updatedTrade.amount,
-          ),
-
-          entryPrice: Number(
-            updatedTrade.entryPrice,
-          ),
-
-          currentPrice: Number(
-            updatedTrade.currentPrice,
-          ),
-
-          exitPrice: Number(
-            updatedTrade.exitPrice,
-          ),
-
-          profit: Number(
-            updatedTrade.profit,
-          ),
-
-          fee: Number(
-            updatedTrade.fee,
-          ),
-
-          confidence: Number(
-            updatedTrade.confidence,
-          ),
-        },
+        trade:
+          updatedTrade,
 
         aiTrading,
-
-        tradingMode:
-          "AI_TRADING",
-
-        ordersEnabled:
-          settings.enabled,
       });
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | INVALID ACTION
+    |--------------------------------------------------------------------------
+    */
+
     return jsonError(
       "Invalid action. Supported actions: START, PAUSE, STOP, ANALYZE, OPEN_TRADE, CLOSE_TRADE.",
-      400,
+      400
     );
   } catch (error) {
     console.error(
       "AI TRADE POST ERROR:",
-      error,
+      error
     );
 
     return NextResponse.json(
@@ -2071,8 +1444,6 @@ export async function POST(
 
           openTrades: 0,
 
-          orderCount: 0,
-
           trades: [],
 
           lastAnalysis: null,
@@ -2080,15 +1451,10 @@ export async function POST(
           updatedAt:
             new Date().toISOString(),
         },
-
-        prices: [],
-
-        tradingMode:
-          "AI_TRADING",
       },
       {
         status: 500,
-      },
+      }
     );
   }
 }
