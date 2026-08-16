@@ -7,9 +7,20 @@ import { Coin } from "@prisma/client";
 |--------------------------------------------------------------------------
 | AI TONKEEPER — AI TRADING API
 |--------------------------------------------------------------------------
-| Market data : CoinGecko
-| Trading : interne à AI TONKEEPER
-| Positions : AITrade
+|
+| Market data:
+| Binance PUBLIC market data only
+|
+| IMPORTANT:
+| - No Binance account
+| - No Binance API key
+| - No orders sent to Binance
+|
+| Trading:
+| Internal AI TONKEEPER only
+|
+| Positions:
+| AITrade
 |--------------------------------------------------------------------------
 */
 
@@ -43,22 +54,26 @@ type CachedPrice = {
 
 /*
 |--------------------------------------------------------------------------
-| COINGECKO CONFIGURATION
+| BINANCE PUBLIC MARKET DATA
+|--------------------------------------------------------------------------
+|
+| This is PUBLIC market data.
+|
+| No authentication is required.
+|
 |--------------------------------------------------------------------------
 */
 
-const COINGECKO_BASE_URL =
-  "https://api.coingecko.com/api/v3";
+const BINANCE_BASE_URL =
+  "https://api.binance.com";
 
-const CACHE_TTL = 30_000;
+const MARKET_CACHE_TTL = 900;
+
+const PRICE_CACHE_TTL = 900;
 
 /*
 |--------------------------------------------------------------------------
 | SERVER MEMORY CACHE
-|--------------------------------------------------------------------------
-|
-| Prevents every browser request from becoming a CoinGecko request.
-|
 |--------------------------------------------------------------------------
 */
 
@@ -76,22 +91,22 @@ const pendingPriceRequests =
 
 /*
 |--------------------------------------------------------------------------
-| COINGECKO IDS
+| COIN -> BINANCE SYMBOL
 |--------------------------------------------------------------------------
 */
 
-function getCoinGeckoId(
+function getBinanceSymbol(
   coin: Coin
 ): string | null {
   switch (coin) {
     case Coin.BTC:
-      return "bitcoin";
+      return "BTCUSDT";
 
     case Coin.ETH:
-      return "ethereum";
+      return "ETHUSDT";
 
     case Coin.BNB:
-      return "binancecoin";
+      return "BNBUSDT";
 
     default:
       return null;
@@ -139,6 +154,58 @@ function symbolToCoin(
   }
 
   return null;
+}
+
+/*
+|--------------------------------------------------------------------------
+| INTERVAL -> BINANCE INTERVAL
+|--------------------------------------------------------------------------
+*/
+
+function getBinanceInterval(
+  minutes: number
+): string {
+  if (minutes <= 1) {
+    return "1m";
+  }
+
+  if (minutes <= 3) {
+    return "3m";
+  }
+
+  if (minutes <= 5) {
+    return "5m";
+  }
+
+  if (minutes <= 15) {
+    return "15m";
+  }
+
+  if (minutes <= 30) {
+    return "30m";
+  }
+
+  if (minutes <= 60) {
+    return "1h";
+  }
+
+  if (minutes <= 120) {
+    return "2h";
+  }
+
+  if (minutes <= 240) {
+    return "4h";
+  }
+
+  if (minutes <= 360) {
+    return "6h";
+  }
+
+  if (minutes <= 720) {
+    return "12h";
+  }
+
+  return "1d";
 }
 
 /*
@@ -226,313 +293,141 @@ async function getOrCreateSettings(
 
 /*
 |--------------------------------------------------------------------------
-| COINGECKO HEADERS
-|--------------------------------------------------------------------------
-*/
-
-function getCoinGeckoHeaders(): HeadersInit {
-  const headers: HeadersInit = {
-    Accept: "application/json",
-  };
-
-  const apiKey =
-    process.env.COINGECKO_API_KEY;
-
-  if (apiKey) {
-    headers["x-cg-demo-api-key"] =
-      apiKey;
-  }
-
-  return headers;
-}
-
-/*
-|--------------------------------------------------------------------------
-| MARKET DAYS
+| FETCH BINANCE KLINES
 |--------------------------------------------------------------------------
 |
-| CoinGecko provides historical market data.
+| Binance public endpoint.
+|
+| No API key.
+| No account.
+| No authentication.
 |
 |--------------------------------------------------------------------------
 */
 
-function getMarketDays(
-  intervalMinutes: number
-): number {
-  if (intervalMinutes <= 5) {
-    return 1;
-  }
-
-  if (intervalMinutes <= 60) {
-    return 2;
-  }
-
-  if (intervalMinutes <= 240) {
-    return 7;
-  }
-
-  if (intervalMinutes <= 1440) {
-    return 30;
-  }
-
-  return 90;
-}
-
-/*
-|--------------------------------------------------------------------------
-| RESAMPLE MARKET DATA
-|--------------------------------------------------------------------------
-*/
-
-function buildCandlesFromPrices(
-  prices: [number, number][],
-  volumes: [number, number][],
-  intervalMinutes: number,
-  limit: number
-): MarketCandle[] {
-  if (!Array.isArray(prices)) {
-    return [];
-  }
-
-  const intervalMs =
-    intervalMinutes *
-    60 *
-    1000;
-
-  const volumeMap =
-    new Map<number, number>();
-
-  for (const item of volumes ?? []) {
-    if (
-      Array.isArray(item) &&
-      item.length >= 2
-    ) {
-      volumeMap.set(
-        Number(item[0]),
-        Number(item[1])
-      );
-    }
-  }
-
-  const buckets =
-    new Map<
-      number,
-      {
-        open: number;
-        high: number;
-        low: number;
-        close: number;
-        volume: number;
-        turnover: number;
-      }
-    >();
-
-  for (const item of prices) {
-    if (
-      !Array.isArray(item) ||
-      item.length < 2
-    ) {
-      continue;
-    }
-
-    const timestamp =
-      Number(item[0]);
-
-    const price =
-      Number(item[1]);
-
-    if (
-      !Number.isFinite(
-        timestamp
-      ) ||
-      !Number.isFinite(price) ||
-      price <= 0
-    ) {
-      continue;
-    }
-
-    const bucketTime =
-      Math.floor(
-        timestamp / intervalMs
-      ) * intervalMs;
-
-    const existing =
-      buckets.get(bucketTime);
-
-    const volume =
-      volumeMap.get(
-        timestamp
-      ) ?? 0;
-
-    if (!existing) {
-      buckets.set(
-        bucketTime,
-        {
-          open: price,
-          high: price,
-          low: price,
-          close: price,
-          volume:
-            Number.isFinite(
-              volume
-            )
-              ? volume
-              : 0,
-          turnover:
-            Number.isFinite(
-              volume
-            )
-              ? volume * price
-              : 0,
-        }
-      );
-    } else {
-      existing.high =
-        Math.max(
-          existing.high,
-          price
-        );
-
-      existing.low =
-        Math.min(
-          existing.low,
-          price
-        );
-
-      existing.close =
-        price;
-
-      if (
-        Number.isFinite(volume)
-      ) {
-        existing.volume +=
-          volume;
-
-        existing.turnover +=
-          volume * price;
-      }
-    }
-  }
-
-  return Array.from(
-    buckets.entries()
-  )
-    .sort(
-      (a, b) =>
-        a[0] - b[0]
-    )
-    .map(
-      ([time, candle]) => ({
-        time,
-
-        open: candle.open,
-
-        high: candle.high,
-
-        low: candle.low,
-
-        close: candle.close,
-
-        volume:
-          candle.volume,
-
-        turnover:
-          candle.turnover,
-      })
-    )
-    .filter(
-      (candle) =>
-        Number.isFinite(
-          candle.open
-        ) &&
-        Number.isFinite(
-          candle.high
-        ) &&
-        Number.isFinite(
-          candle.low
-        ) &&
-        Number.isFinite(
-          candle.close
-        ) &&
-        candle.close > 0
-    )
-    .slice(-limit);
-}
-
-/*
-|--------------------------------------------------------------------------
-| FETCH MARKET FROM COINGECKO
-|--------------------------------------------------------------------------
-*/
-
-async function fetchMarketFromCoinGecko(
+async function fetchMarketFromBinance(
   coin: Coin,
   intervalMinutes: number,
   limit: number
 ): Promise<MarketCandle[]> {
-  const coinId =
-    getCoinGeckoId(coin);
+  const symbol =
+    getBinanceSymbol(coin);
 
-  if (!coinId) {
+  if (!symbol) {
     return [];
   }
 
-  const days =
-    getMarketDays(
+  const interval =
+    getBinanceInterval(
       intervalMinutes
     );
 
   const url =
-    `${COINGECKO_BASE_URL}/coins/${coinId}/market_chart` +
-    `?vs_currency=usd` +
-    `&days=${days}` +
-    `&precision=full`;
+    `${BINANCE_BASE_URL}/api/v3/klines` +
+    `?symbol=${symbol}` +
+    `&interval=${interval}` +
+    `&limit=${limit}`;
 
   const response =
     await fetch(url, {
       method: "GET",
-
       cache: "no-store",
-
-      headers:
-        getCoinGeckoHeaders(),
+      headers: {
+        Accept: "application/json",
+      },
     });
-
-  if (
-    response.status ===
-    429
-  ) {
-    throw new Error(
-      "COINGECKO_RATE_LIMIT"
-    );
-  }
 
   if (!response.ok) {
     console.error(
-      "COINGECKO MARKET HTTP ERROR:",
+      "BINANCE MARKET HTTP ERROR:",
       response.status
     );
 
     throw new Error(
-      `CoinGecko market request failed (${response.status}).`
+      `Binance market request failed (${response.status}).`
     );
   }
 
   const data =
-    (await response.json()) as {
-      prices?: [number, number][];
-      total_volumes?: [
-        number,
-        number
-      ][];
-    };
+    (await response.json()) as unknown;
 
-  return buildCandlesFromPrices(
-    data.prices ?? [],
-    data.total_volumes ?? [],
-    intervalMinutes,
-    limit
-  );
+  if (!Array.isArray(data)) {
+    throw new Error(
+      "Binance returned an invalid market response."
+    );
+  }
+
+  const candles: MarketCandle[] =
+    data
+      .map((item) => {
+        if (
+          !Array.isArray(item) ||
+          item.length < 11
+        ) {
+          return null;
+        }
+
+        const time =
+          Number(item[0]);
+
+        const open =
+          Number(item[1]);
+
+        const high =
+          Number(item[2]);
+
+        const low =
+          Number(item[3]);
+
+        const close =
+          Number(item[4]);
+
+        const volume =
+          Number(item[5]);
+
+        const turnover =
+          Number(item[7]);
+
+        if (
+          !Number.isFinite(time) ||
+          !Number.isFinite(open) ||
+          !Number.isFinite(high) ||
+          !Number.isFinite(low) ||
+          !Number.isFinite(close) ||
+          !Number.isFinite(volume) ||
+          close <= 0
+        ) {
+          return null;
+        }
+
+        return {
+          time,
+          open,
+          high,
+          low,
+          close,
+          volume,
+          turnover:
+            Number.isFinite(
+              turnover
+            )
+              ? turnover
+              : 0,
+        };
+      })
+      .filter(
+        (
+          candle
+        ): candle is MarketCandle =>
+          candle !== null
+      )
+      .sort(
+        (a, b) =>
+          a.time - b.time
+      )
+      .slice(-limit);
+
+  return candles;
 }
 
 /*
@@ -550,9 +445,7 @@ async function getMarketData(
     `${coin}-${intervalMinutes}-${limit}`;
 
   const cached =
-    marketCache.get(
-      cacheKey
-    );
+    marketCache.get(cacheKey);
 
   if (
     cached &&
@@ -576,7 +469,7 @@ async function getMarketData(
     (async () => {
       try {
         const candles =
-          await fetchMarketFromCoinGecko(
+          await fetchMarketFromBinance(
             coin,
             intervalMinutes,
             limit
@@ -586,7 +479,7 @@ async function getMarketData(
           candles.length === 0
         ) {
           throw new Error(
-            "CoinGecko returned no market data."
+            "Binance returned no market data."
           );
         }
 
@@ -596,20 +489,12 @@ async function getMarketData(
             candles,
             expiresAt:
               Date.now() +
-              CACHE_TTL,
+              MARKET_CACHE_TTL,
           }
         );
 
         return candles;
       } catch (error) {
-        /*
-        |--------------------------------------------------------------------------
-        | IMPORTANT:
-        | If CoinGecko temporarily returns 429,
-        | use the last cached data when available.
-        |--------------------------------------------------------------------------
-        */
-
         const stale =
           marketCache.get(
             cacheKey
@@ -640,71 +525,54 @@ async function getMarketData(
 
 /*
 |--------------------------------------------------------------------------
-| FETCH ONE PRICE
+| FETCH CURRENT BINANCE PRICE
 |--------------------------------------------------------------------------
 */
 
-async function fetchPriceFromCoinGecko(
+async function fetchPriceFromBinance(
   coin: Coin
 ): Promise<number> {
-  const coinId =
-    getCoinGeckoId(coin);
+  const symbol =
+    getBinanceSymbol(coin);
 
-  if (!coinId) {
+  if (!symbol) {
     return 0;
   }
 
   const url =
-    `${COINGECKO_BASE_URL}/simple/price` +
-    `?ids=${encodeURIComponent(
-      coinId
-    )}` +
-    `&vs_currencies=usd` +
-    `&precision=full`;
+    `${BINANCE_BASE_URL}/api/v3/ticker/price` +
+    `?symbol=${symbol}`;
 
   const response =
     await fetch(url, {
       method: "GET",
-
       cache: "no-store",
-
-      headers:
-        getCoinGeckoHeaders(),
+      headers: {
+        Accept: "application/json",
+      },
     });
-
-  if (
-    response.status ===
-    429
-  ) {
-    throw new Error(
-      "COINGECKO_RATE_LIMIT"
-    );
-  }
 
   if (!response.ok) {
     throw new Error(
-      `CoinGecko price request failed (${response.status}).`
+      `Binance price request failed (${response.status}).`
     );
   }
 
   const data =
-    (await response.json()) as Record<
-      string,
-      {
-        usd?: number;
-      }
-    >;
+    (await response.json()) as {
+      price?: string;
+    };
 
   const price =
-    Number(
-      data?.[coinId]?.usd
-    );
+    Number(data.price);
 
   if (
     !Number.isFinite(price) ||
     price <= 0
   ) {
-    return 0;
+    throw new Error(
+      "Binance returned an invalid price."
+    );
   }
 
   return price;
@@ -716,7 +584,7 @@ async function fetchPriceFromCoinGecko(
 |--------------------------------------------------------------------------
 */
 
-async function getCoinGeckoPrice(
+async function getBinancePrice(
   coin: Coin
 ): Promise<number> {
   const cached =
@@ -744,15 +612,9 @@ async function getCoinGeckoPrice(
     (async () => {
       try {
         const price =
-          await fetchPriceFromCoinGecko(
+          await fetchPriceFromBinance(
             coin
           );
-
-        if (price <= 0) {
-          throw new Error(
-            "CoinGecko returned an invalid price."
-          );
-        }
 
         priceCache.set(
           coin,
@@ -760,16 +622,14 @@ async function getCoinGeckoPrice(
             price,
             expiresAt:
               Date.now() +
-              CACHE_TTL,
+              PRICE_CACHE_TTL,
           }
         );
 
         return price;
       } catch (error) {
         const stale =
-          priceCache.get(
-            coin
-          );
+          priceCache.get(coin);
 
         if (
           stale &&
@@ -838,15 +698,13 @@ async function buildAiTradingData(
   const closedTrades =
     trades.filter(
       (trade) =>
-        trade.status ===
-        "CLOSED"
+        trade.status === "CLOSED"
     );
 
   const openTrades =
     trades.filter(
       (trade) =>
-        trade.status ===
-        "OPEN"
+        trade.status === "OPEN"
     );
 
   const totalProfit =
@@ -1029,7 +887,7 @@ export async function GET(
 
     /*
     |--------------------------------------------------------------------------
-    | MARKET REQUEST
+    | MARKET
     |--------------------------------------------------------------------------
     */
 
@@ -1095,7 +953,7 @@ export async function GET(
             market: true,
 
             source:
-              "CoinGecko",
+              "Binance Public Market Data",
 
             symbol,
 
@@ -1117,7 +975,7 @@ export async function GET(
         );
       } catch (error) {
         console.error(
-          "COINGECKO MARKET ERROR:",
+          "BINANCE MARKET ERROR:",
           error
         );
 
@@ -1128,18 +986,14 @@ export async function GET(
             market: true,
 
             source:
-              "CoinGecko",
+              "Binance Public Market Data",
 
             symbol,
 
             candles: [],
 
             message:
-              error instanceof Error &&
-              error.message ===
-                "COINGECKO_RATE_LIMIT"
-                ? "CoinGecko rate limit reached. Please retry shortly."
-                : "Unable to retrieve real market data from CoinGecko.",
+              "Unable to retrieve real market data from Binance.",
           },
           {
             status: 503,
@@ -1240,12 +1094,6 @@ export async function POST(
   request: NextRequest
 ) {
   try {
-    /*
-    |--------------------------------------------------------------------------
-    | AUTH
-    |--------------------------------------------------------------------------
-    */
-
     const user =
       await getAuthenticatedUser();
 
@@ -1255,12 +1103,6 @@ export async function POST(
         401
       );
     }
-
-    /*
-    |--------------------------------------------------------------------------
-    | BODY
-    |--------------------------------------------------------------------------
-    */
 
     let body: Record<
       string,
@@ -1286,12 +1128,6 @@ export async function POST(
       )
         .trim()
         .toUpperCase();
-
-    /*
-    |--------------------------------------------------------------------------
-    | SETTINGS
-    |--------------------------------------------------------------------------
-    */
 
     const settings =
       await getOrCreateSettings(
@@ -1413,7 +1249,7 @@ export async function POST(
             AI_TRADABLE_COINS.map(
               async (coin) => {
                 const price =
-                  await getCoinGeckoPrice(
+                  await getBinancePrice(
                     coin
                   );
 
@@ -1436,7 +1272,7 @@ export async function POST(
         }
       } catch (error) {
         console.error(
-          "COINGECKO ANALYSIS ERROR:",
+          "BINANCE ANALYSIS ERROR:",
           error
         );
 
@@ -1445,7 +1281,7 @@ export async function POST(
             success: false,
 
             message:
-              "Unable to retrieve real crypto market prices from CoinGecko.",
+              "Unable to retrieve real crypto market prices from Binance.",
 
             aiTrading:
               await buildAiTradingData(
@@ -1468,7 +1304,7 @@ export async function POST(
             success: false,
 
             message:
-              "Unable to retrieve real crypto market prices from CoinGecko.",
+              "Unable to retrieve real crypto market prices from Binance.",
 
             aiTrading:
               await buildAiTradingData(
@@ -1487,7 +1323,7 @@ export async function POST(
       const confidence = 50;
 
       const analysis =
-        "AI is monitoring BTC, ETH and BNB using real CoinGecko market data.";
+        "AI is monitoring BTC, ETH and BNB using real public Binance market data.";
 
       const decision =
         await prisma.aITradeDecision.create({
@@ -1530,7 +1366,7 @@ export async function POST(
           success: true,
 
           source:
-            "CoinGecko",
+            "Binance Public Market Data",
 
           prices,
 
@@ -1610,19 +1446,19 @@ export async function POST(
 
       try {
         price =
-          await getCoinGeckoPrice(
+          await getBinancePrice(
             coin
           );
       } catch {
         return jsonError(
-          `Unable to retrieve current ${coin} price from CoinGecko.`,
+          `Unable to retrieve current ${coin} price from Binance.`,
           503
         );
       }
 
       if (price <= 0) {
         return jsonError(
-          `Unable to retrieve current ${coin} price from CoinGecko.`,
+          `Unable to retrieve current ${coin} price from Binance.`,
           503
         );
       }
@@ -1763,12 +1599,12 @@ export async function POST(
 
       try {
         currentPrice =
-          await getCoinGeckoPrice(
+          await getBinancePrice(
             trade.coin
           );
       } catch {
         return jsonError(
-          `Unable to retrieve current ${trade.coin} price from CoinGecko.`,
+          `Unable to retrieve current ${trade.coin} price from Binance.`,
           503
         );
       }
@@ -1777,7 +1613,7 @@ export async function POST(
         currentPrice <= 0
       ) {
         return jsonError(
-          `Unable to retrieve current ${trade.coin} price from CoinGecko.`,
+          `Unable to retrieve current ${trade.coin} price from Binance.`,
           503
         );
       }
@@ -1828,12 +1664,6 @@ export async function POST(
           ),
       });
     }
-
-    /*
-    |--------------------------------------------------------------------------
-    | INVALID ACTION
-    |--------------------------------------------------------------------------
-    */
 
     return jsonError(
       "Invalid action. Supported actions: START, PAUSE, STOP, ANALYZE, OPEN_TRADE, CLOSE_TRADE.",

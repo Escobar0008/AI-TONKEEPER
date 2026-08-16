@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(request: NextRequest) {
@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
           success: false,
           message: "Utilisateur non connecté.",
         },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
           success: false,
           message: "Utilisateur introuvable.",
         },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -55,6 +55,7 @@ export async function GET(request: NextRequest) {
         id: user.id,
         name: user.name,
         email: user.email,
+        role: user.role,
         walletId: user.wallet?.walletId ?? null,
         active: user.wallet?.active ?? false,
       },
@@ -71,7 +72,7 @@ export async function GET(request: NextRequest) {
         success: false,
         message: "Erreur serveur.",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

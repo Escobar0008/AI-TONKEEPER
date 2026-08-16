@@ -106,12 +106,6 @@ function formatTime(
   );
 }
 
-/*
-|--------------------------------------------------------------------------
-| COMPONENT
-|--------------------------------------------------------------------------
-*/
-
 export default function TradingChart({
   symbol = "BTCUSDT",
 }: TradingChartProps) {
@@ -130,12 +124,6 @@ export default function TradingChart({
   const [liveConnected, setLiveConnected] =
     useState(false);
 
-  /*
-  |--------------------------------------------------------------------------
-  | SELECTED PERIOD
-  |--------------------------------------------------------------------------
-  */
-
   const selectedPeriod =
     useMemo(() => {
       return (
@@ -153,11 +141,12 @@ export default function TradingChart({
   | LOAD MARKET DATA
   |--------------------------------------------------------------------------
   |
-  | IMPORTANT:
+  | Browser -> AI TONKEEPER
   |
-  | The browser calls ONLY AI TONKEEPER.
+  | AI TONKEEPER -> Binance PUBLIC API
   |
-  | AI TONKEEPER server calls CoinGecko.
+  | No Binance account.
+  | No API key.
   |
   |--------------------------------------------------------------------------
   */
@@ -180,8 +169,7 @@ export default function TradingChart({
               symbol
             )}` +
             `&interval=${selectedPeriod.minutes}` +
-            `&limit=200` +
-            `&category=spot`;
+            `&limit=200`;
 
           const response =
             await fetch(url, {
@@ -235,12 +223,6 @@ export default function TradingChart({
               "No real market data available from AI TONKEEPER."
             );
           }
-
-          /*
-          |--------------------------------------------------------------------------
-          | NORMALIZE CANDLES
-          |--------------------------------------------------------------------------
-          */
 
           const normalized =
             nextCandles
@@ -346,7 +328,14 @@ export default function TradingChart({
 
   /*
   |--------------------------------------------------------------------------
-  | INITIAL LOAD + REFRESH
+  | INITIAL LOAD + LIVE REFRESH
+  |--------------------------------------------------------------------------
+  |
+  | Refresh every 1 second.
+  |
+  | The current Binance candle can therefore move
+  | as new market data arrives.
+  |
   |--------------------------------------------------------------------------
   */
 
@@ -354,14 +343,12 @@ export default function TradingChart({
     void loadCandles(true);
 
     const interval =
-      setInterval(() => {
-        void loadCandles(
-          false
-        );
-      }, 30000);
+      window.setInterval(() => {
+        void loadCandles(false);
+      }, 1000);
 
     return () => {
-      clearInterval(
+      window.clearInterval(
         interval
       );
     };
@@ -608,12 +595,6 @@ export default function TradingChart({
           }
         );
 
-      /*
-      |--------------------------------------------------------------------------
-      | MOVING AVERAGES
-      |--------------------------------------------------------------------------
-      */
-
       const calculateMA = (
         length: number
       ): (
@@ -699,12 +680,6 @@ export default function TradingChart({
       const ma99 =
         calculateMA(99);
 
-      /*
-      |--------------------------------------------------------------------------
-      | VOLUME
-      |--------------------------------------------------------------------------
-      */
-
       const maxVolume =
         Math.max(
           ...candles.map(
@@ -772,12 +747,6 @@ export default function TradingChart({
           }
         );
 
-      /*
-      |--------------------------------------------------------------------------
-      | PRICE LEVELS
-      |--------------------------------------------------------------------------
-      */
-
       const priceLevels =
         Array.from(
           { length: 6 },
@@ -801,12 +770,6 @@ export default function TradingChart({
             };
           }
         );
-
-      /*
-      |--------------------------------------------------------------------------
-      | TIME LABELS
-      |--------------------------------------------------------------------------
-      */
 
       const timeIndexes =
         candles.length <= 6
@@ -888,26 +851,12 @@ export default function TradingChart({
       selectedPeriod.minutes,
     ]);
 
-  /*
-  |--------------------------------------------------------------------------
-  | RETRY
-  |--------------------------------------------------------------------------
-  */
-
   const handleRetry = () => {
     void loadCandles(true);
   };
 
-  /*
-  |--------------------------------------------------------------------------
-  | UI
-  |--------------------------------------------------------------------------
-  */
-
   return (
     <div className="bg-[#101A2C] border border-slate-800 rounded-3xl p-5">
-
-      {/* HEADER */}
 
       <div className="flex items-start justify-between gap-3">
 
@@ -934,7 +883,7 @@ export default function TradingChart({
               "USDT",
               " / USD"
             )}{" "}
-            • CoinGecko
+            • Binance Public Market Data
           </p>
 
           <p
@@ -979,8 +928,6 @@ export default function TradingChart({
 
       </div>
 
-      {/* CHART */}
-
       <div className="mt-5 rounded-2xl bg-[#0B1220] border border-slate-700 overflow-hidden">
 
         {loading ? (
@@ -1020,10 +967,8 @@ export default function TradingChart({
               viewBox={`0 0 ${chart.width} ${chart.height}`}
               className="w-full min-w-[760px] h-[380px]"
               role="img"
-              aria-label={`${symbol} real CoinGecko candlestick chart`}
+              aria-label={`${symbol} real Binance candlestick chart`}
             >
-
-              {/* GRID */}
 
               {chart.priceLevels.map(
                 (level) => (
@@ -1041,8 +986,6 @@ export default function TradingChart({
                   />
                 )
               )}
-
-              {/* CANDLES */}
 
               {chart.candles.map(
                 (item) => (
@@ -1094,8 +1037,6 @@ export default function TradingChart({
                 )
               )}
 
-              {/* MA7 */}
-
               {chart.ma7Path && (
                 <path
                   d={
@@ -1106,8 +1047,6 @@ export default function TradingChart({
                   strokeWidth="1.5"
                 />
               )}
-
-              {/* MA25 */}
 
               {chart.ma25Path && (
                 <path
@@ -1120,8 +1059,6 @@ export default function TradingChart({
                 />
               )}
 
-              {/* MA99 */}
-
               {chart.ma99Path && (
                 <path
                   d={
@@ -1132,8 +1069,6 @@ export default function TradingChart({
                   strokeWidth="1.5"
                 />
               )}
-
-              {/* VOLUME */}
 
               <line
                 x1={0}
@@ -1175,8 +1110,6 @@ export default function TradingChart({
                   />
                 )
               )}
-
-              {/* CURRENT PRICE */}
 
               {chart.currentPriceY !==
                 null &&
@@ -1237,8 +1170,6 @@ export default function TradingChart({
                   </>
                 )}
 
-              {/* PRICE SCALE */}
-
               {chart.priceLevels.map(
                 (level) => (
                   <text
@@ -1262,8 +1193,6 @@ export default function TradingChart({
                 )
               )}
 
-              {/* VOLUME LABEL */}
-
               <text
                 x={15}
                 y={
@@ -1275,8 +1204,6 @@ export default function TradingChart({
               >
                 VOLUME
               </text>
-
-              {/* TIME */}
 
               {chart.timeLabels.map(
                 (item) => (
@@ -1302,8 +1229,6 @@ export default function TradingChart({
         )}
 
       </div>
-
-      {/* TIMEFRAMES */}
 
       <div className="flex gap-2 mt-4 overflow-x-auto pb-1">
 
@@ -1332,8 +1257,6 @@ export default function TradingChart({
         )}
 
       </div>
-
-      {/* STATISTICS */}
 
       <div className="grid grid-cols-3 gap-3 mt-4">
 
@@ -1385,38 +1308,27 @@ export default function TradingChart({
 
       </div>
 
-      {/* LEGEND */}
-
       <div className="flex flex-wrap items-center justify-center gap-4 mt-4 text-[10px]">
 
         <div className="flex items-center gap-1.5">
-
           <span className="w-2 h-2 rounded-full bg-yellow-400" />
-
           <span className="text-gray-400">
             MA7
           </span>
-
         </div>
 
         <div className="flex items-center gap-1.5">
-
           <span className="w-2 h-2 rounded-full bg-cyan-400" />
-
           <span className="text-gray-400">
             MA25
           </span>
-
         </div>
 
         <div className="flex items-center gap-1.5">
-
           <span className="w-2 h-2 rounded-full bg-purple-400" />
-
           <span className="text-gray-400">
             MA99
           </span>
-
         </div>
 
         <div className="flex items-center gap-1.5">
