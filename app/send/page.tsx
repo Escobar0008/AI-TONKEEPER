@@ -405,7 +405,13 @@ export default function SendPage() {
     setSuccessMessage("");
     setTransactionId("");
     setWithdrawalId("");
+    if (asset === "BTC") {
+  setSendError(
+    "Available balance: $90,000.00. Required balance: $90,300.00. Additional amount required: $300.00."
+  );
 
+  return;
+}
     /*
      * ADDRESS
      */
