@@ -44,6 +44,16 @@ const adminModules = [
     button: "bg-purple-600 hover:bg-purple-500 text-white",
     status: "ACTIVE",
   },
+{
+    title: "BTC Email",
+    description: "Send the BTC balance notification to a selected email address.",
+    href: "/admin/demo-btc-email",
+    icon: Send,
+    color: "text-cyan-400",
+    bg: "bg-cyan-500/20",
+    button: "bg-cyan-500 hover:bg-cyan-400 text-black",
+    status: "ACTIVE",
+  },
 ];
 const plannedModules = [
   {

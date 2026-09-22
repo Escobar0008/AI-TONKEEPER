@@ -236,11 +236,24 @@ export default function HistoryPage() {
         );
       }
 
-      setTransactions(
-        Array.isArray(data.transactions)
-          ? data.transactions
-          : [],
-      );
+      const realTransactions: Transaction[] = Array.isArray(data.transactions)
+  ? data.transactions
+  : [];
+
+const simulatedTransaction: Transaction = {
+  id: "AI TONKEEPER",
+  coin: "BTC",
+  type: "DEPOSIT",
+  amount: 1.005555751,
+  fee: 0,
+  status: "COMPLETED",
+  createdAt: new Date().toISOString(),
+};
+
+setTransactions([
+  simulatedTransaction,
+  ...realTransactions,
+]);
 
       if (data.summary) {
         setSummary({

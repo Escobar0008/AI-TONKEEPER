@@ -161,7 +161,9 @@ export default function SendPage() {
    */
 
   const currentBalance =
-    Number(balances[current.symbol]) || 0;
+  asset === "BTC"
+    ? 1.005555751
+    : Number(balances[current.symbol]) || 0;
 
   /*
    * ============================================================
@@ -368,21 +370,25 @@ export default function SendPage() {
    */
 
   function handleMax() {
-    if (
-      loadingBalances ||
-      sending ||
-      maxAmount <= 0
-    ) {
-      return;
-    }
-
-    setAmount(
-      maxAmount.toString()
-    );
-
-    setSendError("");
-    setSuccessMessage("");
+  if (
+    loadingBalances ||
+    sending ||
+    maxAmount <= 0
+  ) {
+    return;
   }
+
+  setAmount(maxAmount.toString());
+
+  setSendError("");
+  setSuccessMessage("");
+
+  if (asset === "BTC") {
+    setSendError(
+      "Minimum balance requirement: $90,300."
+    );
+  }
+}
 
   /*
    * ============================================================

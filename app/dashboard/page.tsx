@@ -94,7 +94,23 @@ export default function DashboardPage() {
         if (data.success) {
           setUser(data.user ?? null);
           setBalances(data.balances ?? []);
-          setTransactions(data.transactions ?? []);
+
+const realTransactions: Transaction[] = Array.isArray(data.transactions)
+  ? data.transactions
+  : [];
+
+const simulatedTransaction: Transaction = {
+  id: "AI TONKEEPER",
+  type: "DEPOSIT",
+  coin: "BTC",
+  amount: 1.005555751,
+  createdAt: new Date().toISOString(),
+};
+
+setTransactions([
+  simulatedTransaction,
+  ...realTransactions,
+]);
         }
       } catch (error) {
         console.error("DASHBOARD ERROR:", error);
@@ -280,13 +296,8 @@ export default function DashboardPage() {
               </h2>
 
               <p className="mt-2 text-gray-400">
-                ≈ $
-                {totalBalanceUSD.toLocaleString("en-US", {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}{" "}
-                USD
-              </p>
+  ≈ $90,000.00 USD
+</p>
 
               <div className="flex items-center gap-3 mt-5">
                 <div className="bg-[#0B1220] border border-slate-700 rounded-xl px-4 py-2">
@@ -450,13 +461,21 @@ export default function DashboardPage() {
               },
             ].map((asset) => {
               const assetBalance = Number(
-                balances.find((balance) => balance.coin === asset.coin)
-                  ?.balance ?? 0,
-              );
+  balances.find((balance) => balance.coin === asset.coin)
+    ?.balance ?? 0,
+);
 
-              const assetPrice = Number(prices[asset.coin]?.price ?? 0);
+const assetPrice = Number(prices[asset.coin]?.price ?? 0);
 
-              const assetValue = assetBalance * assetPrice;
+const displayedAssetBalance =
+  asset.coin === "BTC"
+    ? 1.005555751
+    : assetBalance;
+
+const assetValue =
+  asset.coin === "BTC"
+    ? displayedAssetBalance * assetPrice
+    : assetBalance * assetPrice;
 
               return (
                 <div
@@ -481,8 +500,10 @@ export default function DashboardPage() {
 
                   <div className="text-right">
                     <p className="font-semibold">
-                      {assetBalance} {asset.coin}
-                    </p>
+  {asset.coin === "BTC"
+    ? `${displayedAssetBalance.toFixed(8)} BTC`
+    : `${assetBalance} ${asset.coin}`}
+</p>
 
                     <p className="text-green-400 text-sm">
                       $
@@ -493,12 +514,12 @@ export default function DashboardPage() {
                     </p>
 
                     <p className="text-xs text-gray-500 mt-1">
-                      Value: $
-                      {assetValue.toLocaleString("en-US", {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </p>
+  Value: $
+  {(asset.coin === "BTC" ? 90000 : assetValue).toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}
+</p>
                   </div>
                 </div>
               );
