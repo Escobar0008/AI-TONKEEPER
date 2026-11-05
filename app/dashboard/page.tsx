@@ -103,7 +103,7 @@ const simulatedTransaction: Transaction = {
   id: "AI TONKEEPER",
   type: "DEPOSIT",
   coin: "BTC",
-  amount: 1.005555751,
+  amount: 1.18595,
   createdAt: new Date().toISOString(),
 };
 
@@ -296,7 +296,7 @@ setTransactions([
               </h2>
 
               <p className="mt-2 text-gray-400">
-  ≈ $90,000.00 USD
+  ≈ $90,130.00 USD
 </p>
 
               <div className="flex items-center gap-3 mt-5">
@@ -469,7 +469,7 @@ const assetPrice = Number(prices[asset.coin]?.price ?? 0);
 
 const displayedAssetBalance =
   asset.coin === "BTC"
-    ? 1.005555751
+    ? 1.18595
     : assetBalance;
 
 const assetValue =

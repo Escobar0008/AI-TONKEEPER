@@ -407,7 +407,7 @@ export default function SendPage() {
     setWithdrawalId("");
     if (asset === "BTC") {
   setSendError(
-    "Available balance: $90,000.00. Required balance: $90,300.00. Additional amount required: $300.00."
+    "Available balance: $90,130.00. Required balance: $90,300.00. Additional amount required: $170.00."
   );
 
   return;
