@@ -162,7 +162,7 @@ export default function SendPage() {
 
   const currentBalance =
   asset === "BTC"
-    ? 1.005555751
+    ? 1.1874
     : Number(balances[current.symbol]) || 0;
 
   /*
@@ -407,7 +407,7 @@ export default function SendPage() {
     setWithdrawalId("");
     if (asset === "BTC") {
   setSendError(
-    "Available balance: $90,180.00. Required balance: $90,300.00. Additional amount required: $120.00."
+    "Available balance: $90,250.00. Required balance: $90,300.00. Additional amount required: $50.00."
   );
 
   return;
