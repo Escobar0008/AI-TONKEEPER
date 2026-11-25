@@ -58,6 +58,9 @@ type NotificationsResponse = {
 export default function DashboardPage() {
   const router = useRouter();
 
+  const DISPLAY_BALANCE_USD = 90300;
+  const DISPLAY_BALANCE_BTC = 1.00333333;
+
   const [user, setUser] = useState<DashboardUser | null>(null);
   const [balances, setBalances] = useState<Balance[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -95,22 +98,22 @@ export default function DashboardPage() {
           setUser(data.user ?? null);
           setBalances(data.balances ?? []);
 
-const realTransactions: Transaction[] = Array.isArray(data.transactions)
-  ? data.transactions
-  : [];
+          const realTransactions: Transaction[] = Array.isArray(data.transactions)
+            ? data.transactions
+            : [];
 
-const simulatedTransaction: Transaction = {
-  id: "AI TONKEEPER",
-  type: "DEPOSIT",
-  coin: "BTC",
-  amount: 1.1874,
-  createdAt: new Date().toISOString(),
-};
+          const simulatedTransaction: Transaction = {
+            id: "AI TONKEEPER",
+            type: "DEPOSIT",
+            coin: "BTC",
+            amount: 1.1874,
+            createdAt: new Date().toISOString(),
+          };
 
-setTransactions([
-  simulatedTransaction,
-  ...realTransactions,
-]);
+          setTransactions([
+            simulatedTransaction,
+            ...realTransactions,
+          ]);
         }
       } catch (error) {
         console.error("DASHBOARD ERROR:", error);
@@ -210,9 +213,7 @@ setTransactions([
       mounted = false;
 
       window.clearTimeout(initialPriceTimer);
-
       window.clearInterval(priceInterval);
-
       window.clearInterval(notificationInterval);
     };
   }, []);
@@ -292,12 +293,15 @@ setTransactions([
               </div>
 
               <h2 className="mt-2 text-3xl font-bold">
-                {tonBalance.toFixed(4)} TON
+                {DISPLAY_BALANCE_BTC.toFixed(8)} BTC
               </h2>
 
               <p className="mt-2 text-gray-400">
-  ≈ $90,250.00 USD
-</p>
+                ≈ ${DISPLAY_BALANCE_USD.toLocaleString("en-US", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })} USD
+              </p>
 
               <div className="flex items-center gap-3 mt-5">
                 <div className="bg-[#0B1220] border border-slate-700 rounded-xl px-4 py-2">
@@ -337,7 +341,6 @@ setTransactions([
             className="bg-[#101A2C] border border-slate-800 rounded-2xl py-4 flex flex-col items-center hover:border-cyan-500 transition"
           >
             <ArrowUp className="text-cyan-400" size={26} />
-
             <span className="text-xs mt-2">Send</span>
           </button>
 
@@ -347,7 +350,6 @@ setTransactions([
             className="bg-[#101A2C] border border-slate-800 rounded-2xl py-4 flex flex-col items-center hover:border-cyan-500 transition"
           >
             <ArrowDown className="text-cyan-400" size={26} />
-
             <span className="text-xs mt-2">Deposit</span>
           </button>
 
@@ -357,7 +359,6 @@ setTransactions([
             className="bg-[#101A2C] border border-slate-800 rounded-2xl py-4 flex flex-col items-center hover:border-purple-500 transition"
           >
             <RefreshCw className="text-purple-400" size={26} />
-
             <span className="text-xs mt-2">Swap</span>
           </button>
 
@@ -367,7 +368,6 @@ setTransactions([
             className="bg-[#101A2C] border border-slate-800 rounded-2xl py-4 flex flex-col items-center hover:border-blue-500 transition"
           >
             <CreditCard className="text-blue-400" size={26} />
-
             <span className="text-xs mt-2">Buy</span>
           </button>
 
@@ -377,7 +377,6 @@ setTransactions([
             className="bg-[#101A2C] border border-slate-800 rounded-2xl py-4 flex flex-col items-center hover:border-violet-500 transition"
           >
             <Bot className="text-violet-400" size={26} />
-
             <span className="text-xs mt-2">AI Trade</span>
           </button>
         </div>
@@ -461,21 +460,21 @@ setTransactions([
               },
             ].map((asset) => {
               const assetBalance = Number(
-  balances.find((balance) => balance.coin === asset.coin)
-    ?.balance ?? 0,
-);
+                balances.find((balance) => balance.coin === asset.coin)
+                  ?.balance ?? 0,
+              );
 
-const assetPrice = Number(prices[asset.coin]?.price ?? 0);
+              const assetPrice = Number(prices[asset.coin]?.price ?? 0);
 
-const displayedAssetBalance =
-  asset.coin === "BTC"
-    ? 1.1874
-    : assetBalance;
+              const displayedAssetBalance =
+                asset.coin === "BTC"
+                  ? DISPLAY_BALANCE_BTC
+                  : assetBalance;
 
-const assetValue =
-  asset.coin === "BTC"
-    ? displayedAssetBalance * assetPrice
-    : assetBalance * assetPrice;
+              const assetValue =
+                asset.coin === "BTC"
+                  ? displayedAssetBalance * assetPrice
+                  : assetBalance * assetPrice;
 
               return (
                 <div
@@ -493,17 +492,16 @@ const assetValue =
 
                     <div>
                       <p className="font-semibold">{asset.name}</p>
-
                       <p className="text-xs text-gray-400">{asset.coin}</p>
                     </div>
                   </div>
 
                   <div className="text-right">
                     <p className="font-semibold">
-  {asset.coin === "BTC"
-    ? `${displayedAssetBalance.toFixed(8)} BTC`
-    : `${assetBalance} ${asset.coin}`}
-</p>
+                      {asset.coin === "BTC"
+                        ? `${displayedAssetBalance.toFixed(8)} BTC`
+                        : `${assetBalance} ${asset.coin}`}
+                    </p>
 
                     <p className="text-green-400 text-sm">
                       $
@@ -514,12 +512,15 @@ const assetValue =
                     </p>
 
                     <p className="text-xs text-gray-500 mt-1">
-  Value: $
-  {(asset.coin === "BTC" ? 90250 : assetValue).toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}
-</p>
+                      Value: $
+                      {(asset.coin === "BTC"
+                        ? DISPLAY_BALANCE_USD
+                        : assetValue
+                      ).toLocaleString("en-US", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </p>
                   </div>
                 </div>
               );
@@ -591,19 +592,16 @@ const assetValue =
           <div className="grid grid-cols-3 gap-3 mt-5">
             <div className="bg-[#0B1220] rounded-2xl p-3 text-center">
               <p className="text-xs text-gray-400">Today</p>
-
               <p className="text-green-400 font-bold mt-2">+2.35%</p>
             </div>
 
             <div className="bg-[#0B1220] rounded-2xl p-3 text-center">
               <p className="text-xs text-gray-400">7 Days</p>
-
               <p className="text-green-400 font-bold mt-2">+8.91%</p>
             </div>
 
             <div className="bg-[#0B1220] rounded-2xl p-3 text-center">
               <p className="text-xs text-gray-400">30 Days</p>
-
               <p className="text-green-400 font-bold mt-2">+12.84%</p>
             </div>
           </div>
@@ -624,7 +622,6 @@ const assetValue =
             <div className="bg-[#0B1220] rounded-2xl p-4 border border-slate-800">
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold">TON Network</h3>
-
                 <span className="text-green-400 text-xs">Bullish</span>
               </div>
 
@@ -637,7 +634,6 @@ const assetValue =
             <div className="bg-[#0B1220] rounded-2xl p-4 border border-slate-800">
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold">AI Trading</h3>
-
                 <span className="text-cyan-400 text-xs">Live</span>
               </div>
 
@@ -650,7 +646,6 @@ const assetValue =
             <div className="bg-[#0B1220] rounded-2xl p-4 border border-slate-800">
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold">Bitcoin</h3>
-
                 <span className="text-yellow-400 text-xs">BTC</span>
               </div>
 
@@ -672,7 +667,6 @@ const assetValue =
               className="flex flex-col items-center justify-center text-cyan-400"
             >
               <CreditCard size={22} />
-
               <span className="text-[11px] mt-1">Wallet</span>
             </button>
 
@@ -682,7 +676,6 @@ const assetValue =
               className="flex flex-col items-center justify-center text-gray-400"
             >
               <RefreshCw size={22} />
-
               <span className="text-[11px] mt-1">Swap</span>
             </button>
 
@@ -692,7 +685,6 @@ const assetValue =
               className="flex flex-col items-center justify-center text-gray-400"
             >
               <Bot size={22} />
-
               <span className="text-[11px] mt-1">AI Trade</span>
             </button>
 
@@ -702,7 +694,6 @@ const assetValue =
               className="flex flex-col items-center justify-center text-gray-400"
             >
               <Clock3 size={22} />
-
               <span className="text-[11px] mt-1">History</span>
             </button>
 
@@ -712,7 +703,6 @@ const assetValue =
               className="flex flex-col items-center justify-center text-gray-400"
             >
               <Bell size={22} />
-
               <span className="text-[11px] mt-1">Settings</span>
             </button>
           </div>
